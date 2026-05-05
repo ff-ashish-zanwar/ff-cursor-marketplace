@@ -1,3 +1,4 @@
+
 # Cursor plugin template
 
 Build and publish Cursor Marketplace plugins from a single repo.
