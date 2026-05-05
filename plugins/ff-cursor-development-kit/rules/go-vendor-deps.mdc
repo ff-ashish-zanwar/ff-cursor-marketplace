@@ -1,0 +1,36 @@
+---
+name: go-vendor-deps
+description: Go services vendor their dependencies (`go mod vendor`)
+scope: go-family
+when-to-apply: Adding, upgrading, or removing a Go dependency
+globs: ["**/go.mod", "**/go.sum", "**/vendor/**", "**/Dockerfile*"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/deployment-infrastructure.md
+  - fy-iam-go/.cursor/service-knowledge-base/deployment-infrastructure.md
+  - quote-ai-backend/.cursor/service-knowledge-base/deployment-infrastructure.md
+---
+# Go vendored dependencies
+
+## Rule
+Go services vendor their dependencies (`go mod vendor`). Dockerfiles build with `-mod=vendor`. `vendor/` is committed.
+
+## Why
+Vendored builds are reproducible offline, immune to upstream module removals, and match the pattern every Go service in this workspace already uses.
+
+## Constraints
+- `go mod tidy && go mod vendor` is part of the "dependency change" workflow; both files and the `vendor/` tree are committed together.
+- Dockerfile builds invoke `go build -mod=vendor`; never `-mod=mod` in release images.
+- `vendor/` is not gitignored.
+- CI verifies `go mod verify` and that `vendor/` matches `go.mod`.
+
+## Examples
+
+### Good
+> PR includes `go.mod`, `go.sum`, and the resulting `vendor/` subtree. CI's `go mod verify` and `go build -mod=vendor ./...` pass.
+
+### Bad
+> PR changes `go.mod` only; `vendor/` drifts.
+
+## Related
+- Rules: none directly.
+- Agents: `architecture-agent`, `security-agent` (dep CVE scan).

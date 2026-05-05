@@ -1,0 +1,48 @@
+---
+name: async-transport-per-service-family
+description: Until ADR-02 resolves, default transport per service family (from `building-block-to-services.json`)
+scope: per-service-family
+when-to-apply: Introducing a new async/queue-backed flow
+globs: ["**/queue*/**", "**/asynq/**", "**/taskqueue/**", "**/*listener*", "**/*poller*"]
+awaits-adr: ADR-02
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-02-async-messaging.md
+  - efp-ai-knowledge-base/ai-brain/cross-service-map.md
+  - efp-ai-knowledge-base/ai-brain/building-block-to-services.json
+---
+# Async transport per service family (awaits ADR-02)
+
+## Rule
+Until ADR-02 resolves, default transport per service family (from `building-block-to-services.json`):
+
+- **fb-rates-go tariff events** → MongoDB queues (`tariff_events_queue`, `tariff_status_queue`, `drt_file_events`).
+- **quote-ai-backend pipeline** → Asynq (Redis).
+- **Rates automation (AWS↔GCP)** → GCP Datastore TaskQueue / QATaskQueue.
+- **Cross-service notifications** → AWS SQS.
+- **Scheduled / reminder flows (fb-iqs)** → AWS EventBridge Scheduler.
+- **Inbound third-party** → Gmail / MS Graph webhooks (quote-ai only).
+
+A new async flow picks the transport matching the owning service; introducing a new transport class requires an ADR-02 amendment.
+
+## Why
+Each transport already fits its runtime (Go + Mongo; Go + Redis; Cloud Run + Datastore; EKS + SQS). Introducing a sixth class without consolidating raises the cognitive load and breaks `async-transport-agent`'s selector.
+
+## Constraints
+- Event payloads go through `event-contract-authoring` regardless of transport.
+- Idempotency keys are mandatory on every consumer; at-least-once delivery is the assumed semantic.
+- Dead-letter handling is declared: TTL, max retries, failure destination — documented in the service's `service-communication.md`.
+- Cross-cloud flows carry `correlationId` in the payload, not in transport headers (SQS → Datastore translation drops custom headers).
+
+## Examples
+
+### Good
+> New fb-rates-go amendment-processed event → Mongo `tariff_events_queue` entry; consumer is the same service's listener mode; payload schema updated.
+
+### Bad
+> New fb-rates-go event → AWS SQS just because the dev knows SQS better.
+
+## Related
+- Rules: `service-boundary-and-data-ownership`, `api-contract-first`.
+- Skills: `async-transport-selector`, `event-contract-authoring`.
+- Agents: `async-transport-agent`, `service-boundary-agent`, `adr-compliance-agent`.
+- ADRs: ADR-02.

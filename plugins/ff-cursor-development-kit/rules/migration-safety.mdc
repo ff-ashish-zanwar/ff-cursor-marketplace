@@ -1,0 +1,43 @@
+---
+name: migration-safety
+description: All migrations are backward-compatible within a single release
+scope: workspace-universal (data-store changes)
+when-to-apply: Any schema change to MongoDB, MySQL, DynamoDB, or GCP Datastore
+globs: ["**/migrations/**", "**/*.migration.{go,ts,py,sql}", "**/index.yaml", "**/*_schema.{go,ts,py,json}"]
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/01-EFP/03-efp-database-model/mongodb-models.md
+  - efp-ai-knowledge-base/01-EFP/03-efp-database-model/data-model-overview.md
+  - admin-backend/.cursor/service-knowledge-base/data-store.md
+  - fb-rates-go/.cursor/service-knowledge-base/data-store.md
+---
+# Migration safety
+
+## Rule
+All migrations are backward-compatible within a single release. Every migration ships with:
+1. A rollout plan (old version keeps running during the transition).
+2. A rollback plan (how to revert if the rollout fails).
+3. Tenant backfill strategy if the migration touches per-tenant data.
+4. Index impact analysis if the migration adds or drops an index.
+
+## Why
+Per-tenant Mongo DBs in fb-rates-go / fb-iqs mean one migration fan-out touches N tenants. MySQL master-data migrations in admin-backend can lock tables used by multiple services. Datastore kind evolution affects in-flight Cloud Run Jobs. Breakage in any of these produces cross-service outages.
+
+## Constraints
+- Add fields as optional with defaults first; flip consumers to read them; then make them required in a follow-up release.
+- Never drop a column / field / index in the same release that stops writing to it; one-release gap minimum.
+- Per-tenant Mongo migrations enumerate `tenant_connection` and run against each tenant DB in a resumable loop.
+- MySQL migrations prefer `ALTER TABLE ... ALGORITHM=INPLACE` or an online schema-change tool; table-locking migrations require maintenance windowing.
+- Datastore kind additions ship with an `index.yaml` change if indexed queries change.
+
+## Examples
+
+### Good
+> Migration `2026-04-21_add_frlc_category`: adds nullable `frlcCategory`; service reads it with `omitempty`; a follow-up migration next release fills backfill and flips it to required.
+
+### Bad
+> Migration renames a field in-place and deploys the consumer that expects the new name in the same release.
+
+## Related
+- Skills: `mongo-schema-change`, `mysql-schema-change`, `datastore-kind-change`.
+- Agents: `migration-agent`.
+- Rules: `tenant-isolation`, `service-boundary-and-data-ownership`.

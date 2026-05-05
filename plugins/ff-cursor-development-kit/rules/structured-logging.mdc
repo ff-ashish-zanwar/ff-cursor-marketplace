@@ -1,0 +1,52 @@
+---
+name: structured-logging
+description: All logs are structured JSON to stdout
+scope: workspace-universal
+when-to-apply: Any new request path, job, or background worker
+globs: ["**/*.go", "**/*.ts", "**/*.py"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/coding-guidelines.md
+  - quote-ai-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - admin-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+  - qa-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Structured logging
+
+## Rule
+All logs are structured JSON to stdout:
+- **Go** → Zap JSON encoder.
+- **Node/TS** → Winston (JSON transport).
+- **Python** → stdlib `logging` with a JSONFormatter (rate-agent adds FirestoreHandler for diagnostic mirror).
+
+Every line carries a correlation / task ID (`correlationId` for request-scoped, `task_id` for automation jobs). No raw secrets, tokens, PII, or rate data at INFO+.
+
+## Why
+Logs are the primary cross-cloud debugging surface. Free-text `fmt.Println` / `console.log` / `print` cannot be correlated across services or indexed by log-aggregation platforms. Every `coding-guidelines.md` in the workspace mandates JSON + correlation IDs.
+
+## Constraints
+- Controllers attach `correlationId` to context on ingress; services propagate it; outbound HTTP clients forward it as the `X-Correlation-Id` header.
+- Automation jobs (rate-agent, qa-agent, rate-extraction-service) log `task_id` on every line.
+- Prohibited at INFO+: raw rate rows, JWT tokens, API keys, credit-card numbers, passwords, raw prompt payloads containing customer data.
+- DEBUG lines may include redacted rate data during local development; production log level defaults to INFO.
+
+## Examples
+
+### Good (Go)
+```go
+logger.Info("tariff published",
+    zap.String("correlationId", correlation.From(ctx)),
+    zap.String("tariffId", t.ID),
+    zap.String("vendorId", t.VendorID),
+)
+```
+
+### Bad
+```go
+fmt.Printf("tariff %+v published by %s\n", tariff, user.Token)  // raw token leak, no JSON, no correlation
+```
+
+## Related
+- Agents: `observability-agent`, `security-agent`.
+- Rules: `no-pii-in-logs`, `secrets-management`.
+- ADRs: none.

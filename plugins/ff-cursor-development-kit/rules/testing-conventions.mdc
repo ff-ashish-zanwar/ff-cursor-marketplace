@@ -1,0 +1,47 @@
+---
+name: testing-conventions
+description: - **Go** → `*_test.go` colocated with the file under test
+scope: workspace-universal
+when-to-apply: Any new feature, bug fix, or refactor
+globs: ["**/*_test.go", "**/*.test.ts", "**/__tests__/**", "**/tests/test_*.py"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/coding-guidelines.md
+  - admin-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - quote-ai-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Testing conventions
+
+## Rule
+- **Go** → `*_test.go` colocated with the file under test.
+- **Node/TS** → `*.test.ts` colocated, or under `__tests__/` mirroring the source tree.
+- **Python** → `tests/test_*.py` with pytest.
+
+Every non-trivial code change includes at least one test that would fail without the change. Refactors are covered by existing tests passing unchanged.
+
+## Why
+Each repo's `coding-guidelines.md` mandates the structure above. Tests travel with the code they cover, not in a separate hierarchy that rots.
+
+## Constraints
+- Unit tests cover the service layer (business logic); integration tests cover repository + external-call edges.
+- Table-driven tests preferred in Go.
+- Mocks / fakes live in `*_mock.go`, `__mocks__/`, or `tests/conftest.py`.
+- CI runs the repo's test target on every PR; a failing test blocks the commit gate.
+- The `test-agent` requires net-new code paths to have at least one covering test; refactors must keep existing tests green.
+
+## Examples
+
+### Good (Go)
+```go
+// service/rates_test.go
+func TestSearch_EmptyFilter_ReturnsAll(t *testing.T) { ... }
+func TestSearch_FilterByCarrier_ReturnsSubset(t *testing.T) { ... }
+```
+
+### Bad
+> Change to `service/rates.go` with no corresponding `rates_test.go` update.
+
+## Related
+- Agents: `test-agent`.
+- Rules: `test-coverage-floor` (awaits ADR-09).
+- ADRs: ADR-09.

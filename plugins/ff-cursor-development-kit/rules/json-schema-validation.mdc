@@ -1,0 +1,50 @@
+---
+name: json-schema-validation
+description: Validate at the controller boundary before any business logic runs
+scope: workspace-universal (backend)
+when-to-apply: Any new request, event, or callback payload
+globs: ["**/schemas/**", "**/validation/**", "**/*.pydantic.py", "**/*schema*.{ts,go,py,json,yaml}"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/security.md
+  - admin-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# JSON schema validation
+
+## Rule
+Validate at the controller boundary before any business logic runs. Every ingress payload is parsed into a typed object by a schema validator — AJV (Node/TS), Pydantic (Python), or explicit struct + validator tags (Go).
+
+## Why
+Unvalidated payloads reach services as loose `map[string]interface{}` / `Record<string, unknown>` / `dict` and cause defensive duplication throughout the code. Early rejection keeps error shapes consistent and prevents SSRF / injection via unsafe fields.
+
+## Constraints
+- Handlers receive a validated, typed object — never a raw body.
+- Validation errors produce the service's standard error envelope (`typed-error-handling`).
+- Optional fields have explicit default handling in the schema, not scattered `?? fallback` logic.
+- API-key callback payloads (automation completion, queue webhooks) get the same treatment as JWT-authenticated requests.
+
+## Examples
+
+### Good (Python)
+```python
+class UploadRequest(BaseModel):
+    task_id: str
+    file_url: HttpUrl
+    carrier_code: str = Field(min_length=2, max_length=4)
+
+@router.post("/tasks/initiate")
+async def initiate(req: UploadRequest):
+    return await service.start(req)
+```
+
+### Bad
+```python
+@router.post("/tasks/initiate")
+async def initiate(payload: dict):
+    return await service.start(payload["task_id"], payload["file_url"])
+```
+
+## Related
+- Skills: `go-gin-api-authoring`, `node-ts-express-authoring`, `python-fastapi-authoring`.
+- Agents: `contract-agent`, `security-agent`.
+- Rules: `api-contract-first`, `typed-error-handling`.

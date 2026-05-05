@@ -1,0 +1,36 @@
+---
+name: ng-module-federation-discipline
+description: A federated module is registered in **both** `module-federation.config.js` (exposes / remotes) **and** `app-routing.module.ts` (lazy route)
+scope: angular (freightify-web)
+when-to-apply: Adding or changing an exposed micro-frontend module in freightify-web
+globs: ["freightify-web/**/module-federation.config.js", "freightify-web/**/app-routing.module.ts", "freightify-web/**/*.module.ts"]
+linked-knowledge-base-files:
+  - freightify-web/.cursor/service-knowledge-base/service-communication.md
+  - freightify-web/.cursor/standards/module-development.md
+---
+# Module federation discipline
+
+## Rule
+A federated module is registered in **both** `module-federation.config.js` (exposes / remotes) **and** `app-routing.module.ts` (lazy route). Either alone is a broken state.
+
+## Why
+freightify-web's `service-communication.md` identifies this as a frequent source of runtime-only errors — the module builds, deploys, and resolves correctly in dev but fails in prod when the remote is loaded. Requiring both registrations at the same time prevents half-configured states.
+
+## Constraints
+- PRs that change one file must change the other.
+- Remote hosts are environment-configurable; no hardcoded origins.
+- Shared dependencies (Angular, RxJS) are declared as singletons in `module-federation.config.js`.
+- Removing a federated module removes it from both files and from any consumer lazy-loads.
+
+## Examples
+
+### Good
+> PR adds `exposes: { './RatesModule': ... }` in `module-federation.config.js` AND adds the matching `loadChildren: () => import('rates/RatesModule')` route in `app-routing.module.ts`.
+
+### Bad
+> PR adds the exposes entry only; dev works; production route resolves to 404.
+
+## Related
+- Rules: `ng-layered-feature-domain-data-ui`, `fe-api-response-normalization`.
+- Skills: `module-development`.
+- Agents: `architecture-agent`.

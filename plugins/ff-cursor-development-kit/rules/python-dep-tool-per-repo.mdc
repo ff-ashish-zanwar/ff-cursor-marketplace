@@ -1,0 +1,48 @@
+---
+name: python-dep-tool-per-repo
+description: Until ADR-06 resolves, each Python repo uses its current tool
+scope: per-repo (Python services)
+when-to-apply: Adding, upgrading, or removing a Python dependency
+globs: ["**/pyproject.toml", "**/requirements*.txt", "**/uv.lock", "**/Dockerfile*"]
+awaits-adr: ADR-06
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-06-python-dep-tool.md
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+  - qa-agent/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-extraction-service/.cursor/service-knowledge-base/coding-guidelines.md
+  - extraction-service/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Python dep tool per repo (awaits ADR-06)
+
+## Rule
+Until ADR-06 resolves, each Python repo uses its current tool:
+
+- **qa-agent** → `uv` + `pyproject.toml` + `uv.lock`.
+- **rate-agent** → `uv` + `pyproject.toml`.
+- **rate-extraction-service** → `pip` + `requirements.txt`.
+- **extraction-service** → `pip` + `requirements.txt`.
+
+Add / upgrade / remove operations use that repo's tool; never mix.
+
+## Why
+Mixing `pip install` into a `uv`-managed repo (or vice versa) silently de-syncs the lockfile. CI rebuilds with the declared tool; a drift means "works on my machine" but fails in deployment.
+
+## Constraints
+- Every change to dependencies touches both the manifest (`pyproject.toml` or `requirements.txt`) and the lockfile (`uv.lock` or pinned `requirements.txt`).
+- Dockerfiles invoke the matching tool (`uv sync --frozen` vs `pip install -r requirements.txt`).
+- CI verifies no drift between manifest and lockfile.
+- New Python services adopt `uv` unless ADR-06 accepts `pip`; document the choice in the repo's `coding-guidelines.md`.
+
+## Examples
+
+### Good
+> qa-agent PR: `uv add pandas==2.2.0`; commits `pyproject.toml` + `uv.lock`; Dockerfile already uses `uv sync --frozen`.
+
+### Bad
+> qa-agent PR: `pip install pandas` locally; adds `pandas` to `pyproject.toml` manually; `uv.lock` untouched.
+
+## Related
+- Rules: `py-pydantic-v2-io`.
+- Skills: `python-fastapi-authoring` (detects tool per repo).
+- Agents: `adr-compliance-agent`.
+- ADRs: ADR-06.

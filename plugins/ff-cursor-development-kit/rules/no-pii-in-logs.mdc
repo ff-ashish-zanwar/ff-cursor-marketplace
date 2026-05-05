@@ -1,0 +1,48 @@
+---
+name: no-pii-in-logs
+description: Freight data is commercial, not personal, but the following never appear in logs at INFO+ or in error-report payloads
+scope: workspace-universal
+when-to-apply: Any log line, trace span, or error-report payload
+globs: ["**/*.go", "**/*.ts", "**/*.py"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/security.md
+  - admin-backend/.cursor/service-knowledge-base/security.md
+  - quote-ai-backend/.cursor/service-knowledge-base/security.md
+  - rate-agent/.cursor/service-knowledge-base/security.md
+---
+# No PII / secrets / rate data in logs
+
+## Rule
+Freight data is commercial, not personal, but the following never appear in logs at INFO+ or in error-report payloads:
+- Raw rate rows (freight rates, surcharges, DnD rates).
+- JWT / access tokens / refresh tokens.
+- API keys (`fbratesgoapikey`, `fbiqsapikey`, `RATE_AGENT_API_KEY`, `QA_AGENT_API_KEY`, `BACKEND_SERVICE_API_KEY`, `JIRA_API_TOKEN`).
+- Customer email bodies, shipper names, consignee names (Quote AI path).
+- Raw LLM prompts / responses containing the above.
+
+DEBUG level may include redacted versions during local development; production level is INFO.
+
+## Why
+Every `security.md` in the workspace calls out these categories. Logs flow into CloudWatch / Google Cloud Logging / Sentry / Airbrake — multiple systems with different access controls and retention. One leaky line can violate a customer's commercial-in-confidence terms.
+
+## Constraints
+- Log IDs and counts, not payloads: `{tariffId, vendorId, rowCount: 412}` not `{rows: [...]}`.
+- Tokens and keys are either logged as `***` or as the first 6 characters followed by `***`.
+- Sentry / Airbrake `beforeSend` hooks scrub known-sensitive field names workspace-wide (`token`, `apiKey`, `password`, `rate`, `freight`).
+- LLM call logging captures model, token counts, latency, and prompt hash — never the prompt text at INFO+.
+
+## Examples
+
+### Good
+```ts
+logger.info("search completed", { correlationId, vendorId, resultCount: 42 });
+```
+
+### Bad
+```ts
+logger.info("search", { correlationId, results }); // raw rate rows leak
+```
+
+## Related
+- Agents: `observability-agent`, `security-agent`, `prompt-review-agent`.
+- Rules: `structured-logging`, `secrets-management`.

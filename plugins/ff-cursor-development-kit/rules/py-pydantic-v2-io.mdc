@@ -1,0 +1,50 @@
+---
+name: py-pydantic-v2-io
+description: Data crossing module / function boundaries in Python services is typed via Pydantic v2 `BaseModel` — never raw `dict` or `Any`
+scope: python
+when-to-apply: Any module boundary in a Python service
+globs: ["rate-agent/**/*.py", "qa-agent/**/*.py", "rate-extraction-service/**/*.py", "extraction-service/**/*.py"]
+linked-knowledge-base-files:
+  - rate-extraction-service/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+  - qa-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Pydantic v2 for module I/O
+
+## Rule
+Data crossing module / function boundaries in Python services is typed via Pydantic v2 `BaseModel` — never raw `dict` or `Any`.
+
+## Why
+`rate-extraction-service` and `rate-agent` make this explicit: the Intermediate Format, recipe parameters, and task payloads are all Pydantic models. Raw dicts spread defensive `get("field")` logic, obscure schema drift, and make JSON Schema generation impossible.
+
+## Constraints
+- Public function signatures and return types use Pydantic models (or lists / unions of them).
+- Serialization: `.model_dump()` / `.model_dump_json()` — never `json.dumps(model.__dict__)`.
+- Deserialization: `Model.model_validate(payload)` with `ValidationError` caught at the controller / job boundary.
+- Internal helper functions may use primitive types; boundaries must not.
+- For request/response shapes in FastAPI, let FastAPI infer the schema from the annotation.
+
+## Examples
+
+### Good
+```python
+class Task(BaseModel):
+    task_id: str
+    carrier_code: str
+    source_url: HttpUrl
+
+def process(task: Task) -> ExtractionResult:
+    ...
+```
+
+### Bad
+```python
+def process(task: dict):
+    tid = task.get("task_id")
+    ...
+```
+
+## Related
+- Rules: `json-schema-validation`, `py-typed-exceptions`.
+- Skills: `python-fastapi-authoring`.
+- Agents: `contract-agent`.

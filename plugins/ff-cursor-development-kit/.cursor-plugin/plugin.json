@@ -1,0 +1,13 @@
+{
+    "name": "ff-cursor-development-kit",
+    "displayName": "Freightify cursor development kit",
+    "version": "0.1.0",
+    "description": "On-demand JIRA-driven AI development pipeline for RMS platform services. Provides /implement, /bugfix, /plan, /triage with two human approval gates.",
+    "author": {
+      "name": "Freightify",
+      "email": "ashish.zanwar@freightify.com"
+    },
+    "license": "UNLICENSED",
+    "keywords": ["freightify"],
+    "logo": "assets/logo.svg"
+  }

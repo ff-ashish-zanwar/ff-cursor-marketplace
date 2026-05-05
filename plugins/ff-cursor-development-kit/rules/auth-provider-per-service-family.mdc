@@ -1,0 +1,44 @@
+---
+name: auth-provider-per-service-family
+description: Until ADR-01 resolves, each service keeps its current auth provider; no service switches without an ADR decision
+scope: per-service-family
+when-to-apply: Any change that affects a service's auth provider or token claims
+globs: ["**/middleware/**", "**/auth/**", "**/*interceptor*", "**/*oidc*", "**/*oauth*"]
+awaits-adr: ADR-01
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-01-identity-provider.md
+  - efp-ai-knowledge-base/01-EFP/04-efp-system-architecture/auth-flow.md
+  - efp-ai-knowledge-base/ai-brain/building-block-to-services.json
+---
+# Auth provider per service family (awaits ADR-01)
+
+## Rule
+Until ADR-01 resolves, each service keeps its current auth provider; no service switches without an ADR decision. Providers per family (from `building-block-to-services.json`):
+
+- **fy-iam-go (JWT RS256)**: fb-rates-go, fb-iqs, quote-ai-backend, quote-ai-frontend, skipper, skipperroutes, freightify-web, fb-shipper-frontend.
+- **Keycloak OIDC**: admin-backend, admin-frontend.
+- **Google OAuth (`@freightify.com`)**: extraction-frontend.
+- **API key**: extraction-service, rate-agent, qa-agent, rate-extraction-service.
+- **None**: fb-documents (custom element, host owns auth).
+
+## Why
+The split is load-bearing: fb-rates-go / fb-iqs tenant middleware is coupled to fy-iam-go's `vendorId` claim; admin-backend's permission model is coupled to Keycloak realm roles; extraction-frontend's `@freightify.com` restriction is a simple internal-only gate. Changing provider per-service without consolidation produces token-translation bugs.
+
+## Constraints
+- A new service must pick an existing provider from this list (matching the family it joins).
+- Cross-family calls propagate the caller's token only when the callee accepts it; otherwise use the callee's API-key slot.
+- Any proposal to change a service's provider must land as an ADR-01 amendment before the code change.
+- Frontend apps never talk to two providers from the same code path; dual-token flows (quote-ai-frontend → quote-ai-backend and Skipper) use separate HTTP clients per provider.
+
+## Examples
+
+### Good
+> New IQS-adjacent backend service: adopt fy-iam-go JWT to inherit the `vendorId` tenant middleware chain.
+
+### Bad
+> New admin tool bolts Google OAuth onto admin-backend because "it's simpler" — fractures ADR-01 further.
+
+## Related
+- Rules: `auth-middleware-chain`, `fe-auth-interceptor-discipline`.
+- Agents: `security-agent`, `adr-compliance-agent`.
+- ADRs: ADR-01.

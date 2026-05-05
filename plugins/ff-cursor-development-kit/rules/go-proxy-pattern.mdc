@@ -1,0 +1,48 @@
+---
+name: go-proxy-pattern
+description: All outbound HTTP calls in Go services go through a typed subclass of `BaseProxy`
+scope: go-family
+when-to-apply: Adding a new outbound HTTP integration in a Go service
+globs: ["fb-rates-go/**/*.go", "fb-iqs/**/*.go", "fy-iam-go/**/*.go", "quote-ai-backend/**/*.go", "skipper/**/*.go", "skipperroutes/**/*.go"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/core-components.md
+  - fb-rates-go/.cursor/service-knowledge-base/coding-guidelines.md
+  - admin-backend/.cursor/service-knowledge-base/core-components.md
+---
+# Go proxy pattern (outbound HTTP)
+
+## Rule
+All outbound HTTP calls in Go services go through a typed subclass of `BaseProxy`. Never call `http.Client.Do` directly from a handler or a service.
+
+## Why
+`BaseProxy` centralizes auth header injection (`fbratesgoapikey`, bearer JWT), retry / timeout defaults, structured logging with `correlationId`, and error-envelope translation. Bypassing it scatters those concerns.
+
+## Constraints
+- One proxy type per downstream service (`RatesProxy`, `IQSProxy`, `AdminProxy`, etc.).
+- The proxy owns URL templating, header injection, and error mapping.
+- Proxy methods return typed responses or a typed error; no raw `*http.Response`.
+- Context propagation is mandatory (ctx first parameter); timeouts come from the context, not from the method signature.
+- Tests for the proxy use `httptest.Server`; tests for services use a proxy interface mock.
+
+## Examples
+
+### Good
+```go
+type RatesProxy struct{ *proxy.BaseProxy }
+
+func (p *RatesProxy) Search(ctx context.Context, req SearchRequest) (*SearchResponse, error) {
+    var out SearchResponse
+    err := p.POST(ctx, "/v1/search", req, &out)
+    return &out, err
+}
+```
+
+### Bad
+```go
+// Ad-hoc http.Client in a service method
+resp, _ := http.Post("https://rates/v1/search", "application/json", body)
+```
+
+## Related
+- Rules: `layered-architecture`, `structured-logging`, `typed-error-handling`.
+- Agents: `architecture-agent`.

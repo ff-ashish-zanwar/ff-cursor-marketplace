@@ -1,0 +1,53 @@
+---
+name: typed-error-handling
+description: Errors are typed
+scope: workspace-universal (backend)
+when-to-apply: Any new error path
+globs: ["**/*.go", "**/*.ts", "**/*.py"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/coding-guidelines.md
+  - admin-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-extraction-service/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+  - qa-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Typed error handling
+
+## Rule
+Errors are typed. A central handler maps typed errors to HTTP status codes and envelope shapes. No bare `catch (err)` / `except:` / `_ = err`.
+
+## Why
+Every backend `coding-guidelines.md` mandates typed exceptions and a central handler. Untyped error handling swallows distinctions between `NotFound`, `ValidationFailed`, and `Upstream5xx` — the caller cannot recover meaningfully.
+
+## Constraints
+- Each service declares a small family of error types (validation, not-found, auth, upstream, internal) — either a Go error interface hierarchy, a TypeScript class hierarchy, or a Python exception hierarchy rooted in a service base class.
+- Controllers / router middleware translate errors → HTTP envelope via the central handler.
+- Services return typed errors; they never write HTTP status codes directly.
+- `catch (e)` / `except Exception` / `if err != nil` with no narrowing is allowed only at the outermost boundary where a well-formed envelope is produced.
+
+## Examples
+
+### Good (Python)
+```python
+class AppError(Exception): ...
+class ValidationError(AppError): ...
+class NotFoundError(AppError): ...
+
+@app.exception_handler(AppError)
+async def handle(request, exc: AppError):
+    return to_envelope(exc)
+```
+
+### Bad
+```python
+try:
+    do_thing()
+except Exception:
+    return {"error": "something went wrong"}, 500
+```
+
+## Related
+- Skills: `error-envelope-authoring`.
+- Agents: `code-review-agent`, `contract-agent`.
+- Rules: `error-envelope`.
+- ADRs: ADR-04 (envelope shape).

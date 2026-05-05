@@ -1,0 +1,37 @@
+---
+name: service-boundary-and-data-ownership
+description: Every collection / table / kind / bucket path has exactly one owning service per `ai-brain/ownership-matrix.md`
+scope: workspace-universal
+when-to-apply: Any change that reads or writes data another service owns (MongoDB collection, MySQL table, Datastore kind, DynamoDB table, bucket path)
+globs: ["**/*"]
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/ownership-matrix.md
+  - efp-ai-knowledge-base/01-EFP/03-efp-database-model/data-model-overview.md
+  - efp-ai-knowledge-base/01-EFP/04-efp-system-architecture/communication-patterns.md
+---
+# Service boundary and data ownership
+
+## Rule
+Every collection / table / kind / bucket path has exactly one owning service per `ai-brain/ownership-matrix.md`. Any other service reads or writes it only through the owner's public API or a published event — never via direct DB client.
+
+## Why
+The hybrid AWS + GCP topology already translates traffic through API-key callbacks and queues. Direct cross-service DB access would hide that translation, break tenant isolation, and bypass validation.
+
+## Constraints
+- No cross-service DB connections. `admin-backend` does not read `rates.*`, `fb-rates-go` does not read admin-backend master tables at the DB layer (uses the `/lookup/*` API).
+- Shared-data candidates are onboarded into the owner service's API, not granted secondary DB access.
+- Cross-service reads via REST use the owner's `BaseProxy`-wrapped client in the calling service.
+- A change that requires "just this one query" against another service's DB is the wrong shape — file an API request on the owner.
+
+## Examples
+
+### Good
+> quote-ai-backend needs freight rates → calls `fb-rates-go /v1/search/*` through its proxy layer with JWT.
+
+### Bad
+> quote-ai-backend opens a direct Mongo connection to the shared `rates` DB to read `tariff_freight_rates`.
+
+## Related
+- Agents: `service-boundary-agent`, `data-ownership-agent`.
+- Rules: `tenant-isolation`, `auth-middleware-chain`.
+- ADRs: ADR-02 (async transport affects event-based cross-service reads).

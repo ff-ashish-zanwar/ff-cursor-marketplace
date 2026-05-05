@@ -1,0 +1,48 @@
+---
+name: py-typed-exceptions
+description: Each Python service declares a base exception class (e.g., `AppError`) and subclasses per concern (`ValidationError`, `ExternalServiceError`, `RecipeExecutionError`, `LLMTokenBudgetExceeded`, ...)
+scope: python
+when-to-apply: Any error path in a Python service
+globs: ["rate-agent/**/*.py", "qa-agent/**/*.py", "rate-extraction-service/**/*.py", "extraction-service/**/*.py"]
+linked-knowledge-base-files:
+  - rate-extraction-service/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+  - qa-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Python typed exceptions
+
+## Rule
+Each Python service declares a base exception class (e.g., `AppError`) and subclasses per concern (`ValidationError`, `ExternalServiceError`, `RecipeExecutionError`, `LLMTokenBudgetExceeded`, ...). Never `except:` or `except Exception:` except at the outermost boundary.
+
+## Why
+The three Python AI services (`rate-agent`, `qa-agent`, `rate-extraction-service`) each have their own exception hierarchies. Calling code can distinguish retryable from fatal errors only if types carry the distinction.
+
+## Constraints
+- A FastAPI exception handler maps `AppError` → HTTP envelope; unexpected exceptions become `500 INTERNAL` with the error reported to Sentry / Cloud Logging.
+- Services raise typed exceptions; they never return error tuples like `(None, "message")`.
+- The central handler attaches `correlationId` / `task_id` before logging.
+- Library-code catches only what it can handle, re-raises the rest as a service-specific subclass with the original as `__cause__`.
+
+## Examples
+
+### Good
+```python
+class RateAgentError(Exception): ...
+class TokenBudgetExceeded(RateAgentError): ...
+
+if input_tokens > MAX_INPUT_TOKENS:
+    raise TokenBudgetExceeded(f"{input_tokens} > {MAX_INPUT_TOKENS}")
+```
+
+### Bad
+```python
+try:
+    ...
+except Exception as e:
+    logger.error("something failed")  # lost type, no re-raise
+    return None
+```
+
+## Related
+- Rules: `typed-error-handling`, `py-pydantic-v2-io`, `structured-logging`.
+- Agents: `code-review-agent`.

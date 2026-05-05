@@ -1,0 +1,48 @@
+---
+name: feature-flag-tooling
+description: Until ADR-10 resolves, feature flags use a single convention per repo
+scope: workspace-universal
+when-to-apply: Introducing a user-visible behavior behind a rollout gate
+globs: ["**/*flag*.{go,ts,py}", "**/features/**", "**/config/**"]
+awaits-adr: ADR-10
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-10-feature-flag-tooling.md
+---
+# Feature flag tooling (awaits ADR-10)
+
+## Rule
+Until ADR-10 resolves, feature flags use a single convention per repo:
+
+- Env var `FEATURE_<UPPER_SNAKE>` with values `on` / `off`, checked at process start.
+- For per-tenant rollouts, a `feature_flags` collection on the owning service's DB (one row per tenant × feature).
+
+No ad hoc `if (user.email.endsWith("@freightify.com"))` style gates.
+
+## Why
+No feature-flag tooling is documented today. Tenant rollout is needed; a repeatable convention prevents each service from inventing its own storage pattern.
+
+## Constraints
+- Flag definitions live in a per-service `flags.go` / `flags.ts` / `flags.py` with: name, default value, description, owning ticket, planned removal date.
+- A flag is temporary by default; a TTL in the flag definition forces a cleanup decision.
+- Flag reads happen at the service layer, not in handlers or controllers directly.
+- When ADR-10 accepts a tool (LaunchDarkly / Unleash / homegrown), existing flags migrate; the rule is swept.
+
+## Examples
+
+### Good
+```go
+// flags.go
+const FeatureFRLCCategory = Flag{Name: "FRLC_CATEGORY", Default: false, Owner: "EFP-1234", RemoveBy: "2026-10-01"}
+
+if flag.On(ctx, flags.FeatureFRLCCategory) { ... }
+```
+
+### Bad
+```go
+if os.Getenv("EXPERIMENT") == "true" { ... }  // ad hoc, undocumented
+```
+
+## Related
+- Skills: `feature-flag-authoring`.
+- Agents: `architecture-agent`, `adr-compliance-agent`.
+- ADRs: ADR-10.

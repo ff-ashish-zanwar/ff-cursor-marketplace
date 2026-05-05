@@ -1,0 +1,47 @@
+---
+name: fe-api-response-normalization
+description: API responses pass through a mapping function that converts them to the frontend domain model before reaching components or store
+scope: frontend-universal
+when-to-apply: Adding or modifying an API-consuming service / hook / slice
+globs: ["admin-frontend/src/**/*.ts", "quote-ai-frontend/src/**/*.ts", "extraction-frontend/src/**/*.ts", "freightify-web/**/*.service.ts"]
+linked-knowledge-base-files:
+  - freightify-web/.cursor/standards/module-development.md
+  - admin-frontend/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Frontend API response normalization
+
+## Rule
+API responses pass through a mapping function that converts them to the frontend domain model before reaching components or store. UI code consumes only the normalized model, not the backend shape.
+
+## Why
+Backend shapes evolve (new fields, renamed properties, shape differences between REST and GraphQL, response envelopes). A normalization layer isolates UI from those churns and lets the domain model stay stable.
+
+## Constraints
+- Each domain has `mapFromApi` / `mapToApi` functions alongside the domain model.
+- RTK Query `transformResponse` or Angular service methods own the normalization; components see only the domain type.
+- Null / undefined handling and default values live in the mapper, not in components.
+- Mappers are unit-tested with representative backend payloads.
+
+## Examples
+
+### Good (TS)
+```ts
+type Port = { id: string; name: string; country: string; };
+
+const mapFromApi = (raw: PortApi): Port => ({
+  id: raw._id ?? raw.id,
+  name: raw.port_name,
+  country: raw.country_code.toUpperCase(),
+});
+
+useGetPortsQuery(undefined, { selectFromResult: ({ data }) => ({ data: data?.map(mapFromApi) }) });
+```
+
+### Bad
+```tsx
+{ports.map(p => <li>{p._id ? p.port_name : p.name}</li>)}  // UI branching on backend shape
+```
+
+## Related
+- Rules: `ts-rtk-query-slices`, `fe-no-business-logic-in-ui`, `fe-no-silent-failures`.
+- Agents: `architecture-agent`.

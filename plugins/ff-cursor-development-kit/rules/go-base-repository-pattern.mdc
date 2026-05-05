@@ -1,0 +1,48 @@
+---
+name: go-base-repository-pattern
+description: Mongo repositories embed `mongo.BaseRepository[T]`; MySQL repositories embed `mysql.BaseRepository[T]`
+scope: go-family
+when-to-apply: Adding a new Mongo or MySQL repository in a Go service
+globs: ["fb-rates-go/**/repository/**/*.go", "fb-iqs/**/repository/**/*.go", "quote-ai-backend/**/repository/**/*.go"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/coding-guidelines.md
+  - fb-rates-go/.cursor/service-knowledge-base/core-components.md
+---
+# Go base repository pattern
+
+## Rule
+Mongo repositories embed `mongo.BaseRepository[T]`; MySQL repositories embed `mysql.BaseRepository[T]`. Custom queries go on the repository type; the base handles CRUD, filter translation, and tenant-aware DB handle resolution.
+
+## Why
+Every fb-rates-go repository follows this pattern per `coding-guidelines.md`. Base-repository factoring keeps tenant-aware Mongo handle resolution in exactly one place and ensures index definitions travel with the collection type.
+
+## Constraints
+- One repository per collection / table.
+- Collection / table name is a constant on the repository, not inline strings.
+- Indexes declared via the base-repository `Indexes()` method so creation runs at startup.
+- Tenant-aware Mongo handle resolution (`TenantMongoManager`) is the base repo's responsibility — a new repo does not re-invent it.
+- Aggregation pipelines live in dedicated helper methods, never inlined in services.
+
+## Examples
+
+### Good
+```go
+type FreightRateRepo struct { *mongo.BaseRepository[models.FreightRate] }
+
+func New(mgr *tenant.MongoManager) *FreightRateRepo {
+    return &FreightRateRepo{
+        BaseRepository: mongo.NewBase[models.FreightRate](mgr, "tariff_freight_rates"),
+    }
+}
+```
+
+### Bad
+```go
+// Raw collection access in a service method
+col := client.Database(name).Collection("tariff_freight_rates")
+col.Find(ctx, bson.M{"vendorId": v})
+```
+
+## Related
+- Rules: `tenant-isolation`, `layered-architecture`, `service-boundary-and-data-ownership`.
+- Agents: `architecture-agent`, `tenant-isolation-agent`.

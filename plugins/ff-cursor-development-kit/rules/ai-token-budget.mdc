@@ -1,0 +1,40 @@
+---
+name: ai-token-budget
+description: Every LLM call has a declared input-token ceiling and a pre-call check that raises a typed exception when exceeded
+scope: ai-service
+when-to-apply: Any new LLM invocation or batch expansion in rate-agent / qa-agent / quote-ai-backend
+globs: ["rate-agent/**/*.py", "qa-agent/**/*.py", "quote-ai-backend/**/*.go"]
+linked-knowledge-base-files:
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Token budget discipline
+
+## Rule
+Every LLM call has a declared input-token ceiling and a pre-call check that raises a typed exception when exceeded. rate-agent uses `MAX_INPUT_TOKENS = 500_000`. Other services declare equivalents.
+
+## Why
+rate-agent's `coding-guidelines.md` calls out token-budget pre-checks as mandatory. Without one, a single oversized spreadsheet causes an unbounded cost and latency spike, and may exhaust the provider's context window mid-job.
+
+## Constraints
+- The ceiling is a named constant in the service's config / prompt module, not a magic number at the call site.
+- Pre-call check uses the abstraction's token-counting helper; failure raises a typed exception (`TokenBudgetExceeded`) handled as a user-facing error, not a 500.
+- Batch / adaptive-batching loops split input to stay under the ceiling; each batch carries its own check.
+- Logs record input-token count, output-token count, and latency per call — never the prompt text at INFO+.
+
+## Examples
+
+### Good
+```python
+if input_tokens > MAX_INPUT_TOKENS:
+    raise TokenBudgetExceeded(f"{input_tokens} > {MAX_INPUT_TOKENS}")
+```
+
+### Bad
+```python
+resp = chat(messages=[system(prompt), user(giant_blob)])  # no check; may crash or cost 10x
+```
+
+## Related
+- Rules: `ai-llm-abstraction-layer`, `py-typed-exceptions`.
+- Agents: `prompt-review-agent`, `performance-agent`.
+- ADRs: ADR-05.

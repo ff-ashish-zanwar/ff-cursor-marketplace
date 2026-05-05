@@ -1,0 +1,35 @@
+---
+name: ai-service-mode-polymorphism
+description: rate-agent and qa-agent run in three modes: `web` (FastAPI), `polling` (Datastore queue poller), `job` (Cloud Run Job)
+scope: ai-service (rate-agent, qa-agent)
+when-to-apply: Adding new AI orchestration logic in rate-agent or qa-agent
+globs: ["rate-agent/**/*.py", "qa-agent/**/*.py"]
+linked-knowledge-base-files:
+  - rate-agent/.cursor/architecture.md
+  - qa-agent/.cursor/ARCHITECTURE.md
+---
+# AI service mode polymorphism
+
+## Rule
+rate-agent and qa-agent run in three modes: `web` (FastAPI), `polling` (Datastore queue poller), `job` (Cloud Run Job). New AI logic must work in **all three** modes without special-casing.
+
+## Why
+Both services compose the same core pipeline under different entry points. Logic that works in `web` but not in `polling` or `job` creates silent regressions in the batch path, where most production traffic actually runs.
+
+## Constraints
+- Business logic takes a task payload (Pydantic model) and produces a result — never a FastAPI `Request` or a Datastore entity directly.
+- Mode-specific adapters live at the entry point: HTTP handler → payload, poller → payload, job main → payload.
+- Logging includes a `run_mode` field so operators can distinguish paths.
+- Tests cover the core pipeline once; per-mode tests cover only the adapter layer.
+
+## Examples
+
+### Good
+> `service/extractor.py` has `def extract(task: Task) -> Result`. `main_web.py`, `main_poller.py`, `main_job.py` each parse their trigger to `Task` and call `extract`.
+
+### Bad
+> `service/extractor.py` accesses `request.json()` or `datastore_entity.key` — coupled to one mode.
+
+## Related
+- Rules: `py-pydantic-v2-io`, `ai-llm-abstraction-layer`.
+- Agents: `architecture-agent`.

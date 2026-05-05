@@ -1,0 +1,48 @@
+---
+name: tenant-isolation
+description: Services that carry per-tenant data (`fb-rates-go`, `fb-iqs`) resolve tenants from the `vendorId` JWT claim
+scope: workspace-universal
+when-to-apply: Any change touching fb-rates-go, fb-iqs, or any service that resolves tenant-scoped data
+globs: ["fb-rates-go/**/*.go", "fb-iqs/**/*.go", "**/*tenant*", "**/middleware/**"]
+awaits-adr: ADR-03
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/01-EFP/04-efp-system-architecture/auth-flow.md
+  - fb-rates-go/.cursor/service-knowledge-base/core-components.md
+  - fb-iqs/.cursor/architecture.md
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-03-tenant-isolation.md
+---
+# Tenant isolation
+
+## Rule
+Services that carry per-tenant data (`fb-rates-go`, `fb-iqs`) resolve tenants from the `vendorId` JWT claim. The tenant's connection metadata is fetched from MySQL `tenant_connection`. Mongo access goes through `TenantMongoManager` against the per-tenant database — never the shared `admin` DB.
+
+Services currently using the "shared DB + `vendorId` field" pattern (`admin-backend`, `quote-ai-backend`) must filter every query by `vendorId` and never drop the filter on any path.
+
+## Why
+Per-tenant Mongo is load-bearing for fb-rates-go / fb-iqs. A request missing `vendorId` resolution cannot be routed correctly; a shared-DB query missing the `vendorId` filter is a data leak.
+
+## Constraints
+- Every fb-rates-go / fb-iqs request passes through the middleware chain `Token → Tenant → User → Company → Role → EfpMiddleware`. No route skips Tenant.
+- `TenantMongoManager` is the only way to get a per-tenant Mongo handle in those services.
+- In shared-DB services, the repository layer enforces a `vendorId` filter; handlers and services never pass `nil` for tenant.
+- Cross-service calls propagate the JWT (including `vendorId`), never a tenant-agnostic service token.
+- Background jobs, webhook handlers, and async workers reconstruct tenant context from the persisted payload; they never run "tenant-wide" scans unless the spec explicitly says so.
+
+## Examples
+
+### Good (Go)
+```go
+db := tenantmongo.From(ctx)  // resolves via vendorId claim
+return db.Collection("tariff_freight_rates").Find(...)
+```
+
+### Bad
+```go
+// Hard-coded shared DB — leaks across tenants
+return ratesMongoShared.Collection("tariff_freight_rates").Find(...)
+```
+
+## Related
+- Agents: `tenant-isolation-agent` (blocks commit on violation).
+- Rules: `auth-middleware-chain`, `service-boundary-and-data-ownership`.
+- ADRs: ADR-03 decides whether all services converge to one pattern.

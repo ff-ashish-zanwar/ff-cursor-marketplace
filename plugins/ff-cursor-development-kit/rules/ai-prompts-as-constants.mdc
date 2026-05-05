@@ -1,0 +1,52 @@
+---
+name: ai-prompts-as-constants
+description: Prompt strings (system, user, tool) live in dedicated files — `prompt.py`, `prompts.py`, `business_rules.py`, or `ai-workflow/skills/*.md` — never inline in business-logic modules
+scope: ai-service
+when-to-apply: Any new prompt string in an AI service or anywhere an LLM is invoked
+globs: ["rate-agent/**/*.py", "qa-agent/**/*.py", "quote-ai-backend/**/*.go", "**/prompt.py", "**/prompts.py", "**/business_rules.py"]
+linked-knowledge-base-files:
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+  - qa-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Prompts live in dedicated files
+
+## Rule
+Prompt strings (system, user, tool) live in dedicated files — `prompt.py`, `prompts.py`, `business_rules.py`, or `ai-workflow/skills/*.md` — never inline in business-logic modules.
+
+## Why
+rate-agent's `coding-guidelines.md` is explicit: prompts are versioned, diffable artifacts. Inlining them in a service function means every tweak produces a noisy diff on unrelated logic, and prompt regressions become invisible in review.
+
+## Constraints
+- Each prompt is a named constant; the function consuming it imports the constant.
+- Prompt files follow the Role / Context / Task / Constraints / Output shape (`prompt-governance`).
+- Templates with runtime substitution use a single format mechanism per service (Python `.format`, f-strings with bounded placeholders, Go `text/template`). Runtime inputs are validated before substitution.
+- Prompt changes appear as their own commit when they are the substance of the change.
+
+## Examples
+
+### Good (Python)
+```python
+# prompts/extraction.py
+EXTRACT_SYSTEM = """
+Role: ...
+Context: ...
+Task: ...
+Constraints: ...
+Output: JSON matching schema X.
+"""
+```
+
+```python
+# service/extractor.py
+from prompts.extraction import EXTRACT_SYSTEM
+chat(messages=[system(EXTRACT_SYSTEM), user(input)])
+```
+
+### Bad
+```python
+chat(messages=[{"role": "system", "content": "You are a helpful assistant that extracts rates..."}])
+```
+
+## Related
+- Rules: `ai-llm-abstraction-layer`, `prompt-governance`, `ai-token-budget`.
+- Agents: `prompt-review-agent`.

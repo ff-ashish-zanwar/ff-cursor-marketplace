@@ -1,0 +1,41 @@
+---
+name: fe-no-silent-failures
+description: Every failure surfaces to the user via a toast, dialog, inline message, or router redirect AND is reported to the error tracker (Sentry for React apps, Airbrake for Angular / legacy, Sentry for quote-ai-frontend)
+scope: frontend-universal
+when-to-apply: Any API call, async action, or error boundary
+globs: ["admin-frontend/src/**/*.ts", "admin-frontend/src/**/*.tsx", "quote-ai-frontend/src/**/*.ts", "extraction-frontend/src/**/*.ts", "freightify-web/**/*.ts", "fb-shipper-frontend/**/*.js"]
+linked-knowledge-base-files:
+  - freightify-web/.cursor/standards/module-development.md
+  - admin-frontend/.cursor/ARCHITECTURE.md
+  - quote-ai-frontend/.cursor/architecture.md
+---
+# No silent frontend failures
+
+## Rule
+Every failure surfaces to the user via a toast, dialog, inline message, or router redirect AND is reported to the error tracker (Sentry for React apps, Airbrake for Angular / legacy, Sentry for quote-ai-frontend).
+
+## Why
+freightify-web, admin-frontend, and quote-ai-frontend all ship error-tracking integrations. Swallowing errors (`.catch(() => {})` or empty Angular `error` callbacks) produces frustrated users and zero support-side visibility.
+
+## Constraints
+- No empty catch blocks. Even "expected" failures (`401` on refresh) must produce a user-visible action (redirect to login, soft-retry with message).
+- Error-tracker integration has a `beforeSend` that scrubs tokens, rate data, and PII (see `no-pii-in-logs`).
+- Global handlers catch uncaught promise rejections and unhandled errors, reporting them with `correlationId` from the last API call.
+- Retry policies are explicit, not implicit; a loop that hides a persistent failure is a bug.
+
+## Examples
+
+### Good
+```ts
+try { await api.saveRate(rate); toast.success('Saved'); }
+catch (e) { toast.error(resolveMessage(e)); Sentry.captureException(e, { tags: { correlationId } }); }
+```
+
+### Bad
+```ts
+api.saveRate(rate).catch(() => {});  // silent loss
+```
+
+## Related
+- Rules: `structured-logging`, `no-pii-in-logs`.
+- Agents: `observability-agent`, `code-review-agent`.

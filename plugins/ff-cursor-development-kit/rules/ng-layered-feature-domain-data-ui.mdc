@@ -1,0 +1,42 @@
+---
+name: ng-layered-feature-domain-data-ui
+description: Every freightify-web module separates into four folders with a mandatory dependency direction
+scope: angular (freightify-web)
+when-to-apply: Any new module, component, or service in freightify-web
+globs: ["freightify-web/**/*.ts", "freightify-web/**/*.html"]
+linked-knowledge-base-files:
+  - freightify-web/.cursor/standards/module-development.md
+---
+# Feature / Domain / Data-Access / UI layering
+
+## Rule
+Every freightify-web module separates into four folders with a mandatory dependency direction:
+
+`feature → domain → data-access → ui`
+
+- `feature/` — routed module, orchestrates domain + UI.
+- `domain/` — business logic, selectors, facade services (framework-agnostic where practical).
+- `data-access/` — NgRx effects, HTTP services, adapter layer.
+- `ui/` — dumb presentational components.
+
+Dependencies only flow downward. `ui/` does not import `data-access/`; `domain/` does not import `feature/`.
+
+## Why
+freightify-web's `.cursor/standards/module-development.md` defines this as the canonical layering. Breaking the direction produces cyclical imports, untestable components, and duplicated HTTP calls.
+
+## Constraints
+- A component in `ui/` receives inputs and emits outputs; it does not inject HTTP or effects.
+- `data-access/` owns NgRx effects and raw API clients; consumers read through `domain/` facades.
+- Shared models live in `domain/`, not `ui/`.
+
+## Examples
+
+### Good
+> `rates/feature/rates.module.ts` uses `RatesFacade` from `rates/domain/`; facade uses `RatesApi` from `rates/data-access/`; `ui/rate-card.component.ts` is pure presentational.
+
+### Bad
+> `ui/rate-card.component.ts` injects `HttpClient` and calls `/api/efp/search`.
+
+## Related
+- Rules: `ng-module-federation-discipline`, `fe-no-business-logic-in-ui`, `fe-api-response-normalization`.
+- Skills: `module-development`, `feature-development-angular`.

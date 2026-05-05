@@ -1,0 +1,41 @@
+---
+name: human-approval-gates
+description: The `/implement` and `/bugfix` pipelines have **two mandatory, non-skippable** human approval gates
+scope: workspace-universal (pipeline)
+when-to-apply: Every `/implement` and `/bugfix` run
+globs: []
+linked-knowledge-base-files:
+  - freightify-web/.cursor/skills/
+  - efp-ai-knowledge-base/ai-workflow/walkthrough-findings.md
+---
+# Human approval gates
+
+## Rule
+The `/implement` and `/bugfix` pipelines have **two mandatory, non-skippable** human approval gates:
+
+- **Gate 1** — after the `planner-agent` produces its cross-repo plan, before any branches are created or code is written. Gate 1's reply also carries the per-repo base-branch choices (e.g., `approve; fb-rates-go=development, admin-backend=release/2026.04`), which feed directly into `base-branch-picker-agent`.
+- **Gate 2** — after all review agents pass, before the pipeline terminates. Approving Gate 2 ends the run; the commit already lives on the feature branch from the `code` phase, and the developer raises the MR.
+
+Each gate accepts exactly one of three replies: `approve`, `reject`, or `revise <notes>`. Gate 1 additionally accepts per-repo base overrides in the same reply.
+
+## Why
+This is the 7-step meta-pattern used in every `freightify-web/.cursor/skills/**/SKILL.md`. The pipeline is authorized to think, search, and generate — but not to commit human-visible work without explicit approval.
+
+## Constraints
+- No "silent" gates; each gate emits a Checkpoint summarizing what was produced and what is about to happen.
+- `revise <notes>` re-enters the current phase; it does not advance.
+- `reject` halts the pipeline and preserves partial artifacts in `task-history/<KEY>.md`.
+- Tools that run unattended (e.g., CI) must not impersonate a human at these gates; the developer's explicit reply is required.
+
+## Examples
+
+### Good
+> Gate 1 emitted after planner-agent. Developer replies `revise: also update the admin-backend lookup table`. Planner re-runs with that constraint.
+
+### Bad
+> Coder-agent starts writing code after planner-agent without any Gate 1 reply because the test harness auto-approved.
+
+## Related
+- Skills: `plan-and-implement`, and every skill that composes it.
+- Agents: `planner-agent`, `coder-agent`, `base-branch-picker-agent`.
+- Commands: `/implement`, `/bugfix`.

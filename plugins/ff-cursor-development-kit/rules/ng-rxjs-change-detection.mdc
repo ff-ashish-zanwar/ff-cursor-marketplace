@@ -1,0 +1,46 @@
+---
+name: ng-rxjs-change-detection
+description: - Components use `ChangeDetectionStrategy.OnPush`
+scope: angular (freightify-web, fb-documents)
+when-to-apply: Any new Angular component, directive, or observable pipeline
+globs: ["freightify-web/**/*.component.ts", "freightify-web/**/*.service.ts", "fb-documents/**/*.component.ts"]
+linked-knowledge-base-files:
+  - freightify-web/.cursor/standards/module-development.md
+---
+# RxJS and change detection
+
+## Rule
+- Components use `ChangeDetectionStrategy.OnPush`.
+- Templates subscribe via the `async` pipe — never manual `.subscribe()` in components (except for side-effectful one-shots where the result is not rendered).
+- Nested subscriptions are forbidden; use `switchMap` / `mergeMap` / `concatMap` / `exhaustMap` with intent.
+- Multi-consumer observables apply `shareReplay({ bufferSize: 1, refCount: true })` to avoid duplicate HTTP.
+
+## Why
+freightify-web's standards explicitly call out OnPush + async pipe + no nested subscriptions. Default change detection cascades across module federation with noticeable latency; nested subscriptions leak; un-shared streams re-request the backend on every template binding.
+
+## Constraints
+- Every new component declares `changeDetection: ChangeDetectionStrategy.OnPush`.
+- Manual subscriptions (where unavoidable) unsubscribe via `takeUntilDestroyed()` or `takeUntil(destroy$)`.
+- `shareReplay` is applied where the observable feeds more than one template binding or child component.
+- Effects/services expose observables; components consume them via the async pipe.
+
+## Examples
+
+### Good
+```ts
+@Component({ ..., changeDetection: ChangeDetectionStrategy.OnPush })
+class RateCardComponent {
+  rate$ = this.facade.rate$.pipe(shareReplay({ bufferSize: 1, refCount: true }));
+}
+```
+
+### Bad
+```ts
+ngOnInit() {
+  this.ratesApi.list().subscribe(a => a.forEach(x => this.detailsApi.get(x.id).subscribe(d => this.items.push(d))));
+}
+```
+
+## Related
+- Rules: `ng-layered-feature-domain-data-ui`, `fe-no-silent-failures`.
+- Skills: `feature-development-angular`, `ui-review`.

@@ -1,0 +1,43 @@
+---
+name: test-coverage-floor
+description: Until ADR-09 resolves, the interim rule is **diff coverage > 0 on net-new code paths**
+scope: workspace-universal
+when-to-apply: Every code change touched by `/implement` or `/bugfix`
+globs: ["**/*_test.go", "**/*.test.ts", "**/tests/**", "**/__tests__/**"]
+awaits-adr: ADR-09
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-09-test-coverage-floor.md
+---
+# Test coverage floor (awaits ADR-09)
+
+## Rule
+Until ADR-09 resolves, the interim rule is **diff coverage > 0 on net-new code paths**:
+
+- Any net-new function / method / class must have at least one test that exercises its happy path.
+- Any new branch (if / else / case) that is not trivially unreachable must have at least one test.
+- Bug fixes include a regression test that fails without the fix.
+- Legacy-code refactors keep existing tests green; coverage neither grows nor falls.
+
+When ADR-09 accepts a percentage floor, `test-agent` replaces this interim rule.
+
+## Why
+Zero-coverage PRs accumulate technical debt silently. A diff-coverage floor is cheap to enforce and produces the ratchet toward whichever percentage ADR-09 eventually picks.
+
+## Constraints
+- `test-agent` runs the repo's test command and checks new code paths for coverage.
+- Integration tests count; end-to-end tests do not (they prove the system works, not that the unit is covered).
+- Intentionally untested paths (e.g., trivial pass-through, logging) require a one-line comment explaining why.
+- Commented-out tests count as zero coverage and block the gate.
+
+## Examples
+
+### Good
+> Bug fix for tenant-filter bypass in fb-rates-go: repository method change + a new `*_test.go` case that calls the method with a foreign tenant and asserts the filter is enforced.
+
+### Bad
+> Bug fix with no accompanying test; `test-agent` blocks.
+
+## Related
+- Rules: `testing-conventions`.
+- Agents: `test-agent`, `adr-compliance-agent`.
+- ADRs: ADR-09.

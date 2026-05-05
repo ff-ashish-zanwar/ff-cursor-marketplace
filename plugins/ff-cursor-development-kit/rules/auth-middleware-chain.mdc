@@ -1,0 +1,50 @@
+---
+name: auth-middleware-chain
+description: Every authenticated route on an EFP backend plugs into the chain in order
+scope: workspace-universal (EFP backends that sit behind Skipper)
+when-to-apply: Any new route in fb-rates-go, fb-iqs, quote-ai-backend, or any service that consumes fy-iam-go JWTs
+globs: ["fb-rates-go/**/routes/**", "fb-iqs/**/routes/**", "quote-ai-backend/**/routes/**", "**/middleware/**"]
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/01-EFP/04-efp-system-architecture/auth-flow.md
+  - fb-rates-go/.cursor/architecture.md
+  - fb-iqs/.cursor/architecture.md
+---
+# Auth middleware chain
+
+## Rule
+Every authenticated route on an EFP backend plugs into the chain in order:
+
+`Token → Tenant → User → Company → Role → EfpMiddleware`
+
+Routes that legitimately skip Tenant (e.g., cross-tenant admin paths) must be explicit and reviewed.
+
+## Why
+The chain is the contract between Skipper, fy-iam-go, and the service. Each middleware assumes the previous one ran. Token (without Tenant) opens tenant-agnostic DB scans; Tenant (without User) hides per-user auditing.
+
+## Constraints
+- A new route registers middlewares in the defined order; none is silently dropped.
+- API-key endpoints (`fbratesgoapikey`, `fbiqsapikey`, `BACKEND_SERVICE_API_KEY`, `RATE_AGENT_API_KEY`, `QA_AGENT_API_KEY`) are the only exception; those live in a separate route group and never mix JWT auth with key auth.
+- `EfpMiddleware` (feature gating) runs last; tests must cover the case where the tenant lacks the required EFP feature.
+- When adding a public (unauthenticated) route, document it in the repo's `service-communication.md` and get it added to Skipper routes explicitly.
+
+## Examples
+
+### Good (Go, Gin)
+```go
+efp := router.Group("/api/efp")
+efp.Use(mw.Token(), mw.Tenant(), mw.User(), mw.Company(), mw.Role(), mw.Efp())
+efp.GET("/tariff/:id", h.GetTariff)
+```
+
+### Bad
+```go
+// Tenant skipped - any tenant can read any tariff
+efp := router.Group("/api/efp")
+efp.Use(mw.Token(), mw.User())
+efp.GET("/tariff/:id", h.GetTariff)
+```
+
+## Related
+- Agents: `security-agent`, `tenant-isolation-agent`.
+- Rules: `tenant-isolation`, `auth-provider-per-service-family`.
+- ADRs: ADR-01.

@@ -1,0 +1,42 @@
+---
+name: fe-no-business-logic-in-ui
+description: Components are presentational
+scope: frontend-universal
+when-to-apply: Any new component or change to an existing component
+globs: ["admin-frontend/src/**/*.tsx", "quote-ai-frontend/src/**/*.tsx", "extraction-frontend/src/**/*.tsx", "freightify-web/**/*.component.ts", "fb-shipper-frontend/**/*.js"]
+linked-knowledge-base-files:
+  - freightify-web/.cursor/standards/module-development.md
+  - admin-frontend/.cursor/ARCHITECTURE.md
+---
+# No business logic in UI components
+
+## Rule
+Components are presentational. Business logic — rate calculations, tenant resolution, permission checks, API orchestration — lives in domain / service / data-access layers (Angular `domain/` + `data-access/`; React custom hooks + service modules).
+
+## Why
+freightify-web's `.cursor/standards/module-development.md` mandates a `feature → domain → data-access → ui` split. admin-frontend's ARCHITECTURE.md mirrors the pattern with React + RTK. Business rules embedded in JSX/TSX/HTML templates are untestable and duplicate when the same rule needs to run in another screen.
+
+## Constraints
+- Components receive data via props / store selectors and emit events / dispatches. They do not compute domain values inline.
+- Custom hooks (`useQuoteTotals`, `useRateEligibility`) encapsulate reusable logic.
+- Angular: business logic in `domain/` services; components consume via injected service + `async` pipe.
+- Cross-screen logic lives in a domain module, not copied between features.
+
+## Examples
+
+### Good (React)
+```tsx
+const { total, currency } = useQuoteTotals(quote);
+return <div>{formatMoney(total, currency)}</div>;
+```
+
+### Bad
+```tsx
+const total = quote.items.reduce((s, i) => s + i.price * i.qty, 0) * (1 + quote.tax);
+return <div>${total.toFixed(2)}</div>;
+```
+
+## Related
+- Rules: `fe-api-response-normalization`, `ng-layered-feature-domain-data-ui`.
+- Skills: `feature-development-angular`, `feature-development-react`, `module-development`.
+- Agents: `code-review-agent`.

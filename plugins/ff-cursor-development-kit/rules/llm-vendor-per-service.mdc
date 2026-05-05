@@ -1,0 +1,46 @@
+---
+name: llm-vendor-per-service
+description: Until ADR-05 resolves, the current vendor assignment per service is authoritative
+scope: per-service-family (AI services)
+when-to-apply: Adding or swapping an LLM vendor in rate-agent, qa-agent, or quote-ai-backend
+globs: ["rate-agent/**/*.py", "qa-agent/**/*.py", "quote-ai-backend/**/*.go"]
+awaits-adr: ADR-05
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-05-llm-vendor.md
+  - rate-agent/.cursor/architecture.md
+  - qa-agent/.cursor/ARCHITECTURE.md
+  - quote-ai-backend/.cursor/architecture.md
+---
+# LLM vendor per service (awaits ADR-05)
+
+## Rule
+Until ADR-05 resolves, the current vendor assignment per service is authoritative:
+
+- **rate-agent** → Google Gemini (`gemini-2.5-pro`, `gemini-2.0-flash`) via LiteLLM.
+- **qa-agent** → Azure OpenAI (`gpt-4.1`) via LiteLLM.
+- **quote-ai-backend** → OpenAI / Gemini / Anthropic mix via `LiteLLMProvider` / `model_client.go`.
+
+A new AI code path in an existing service uses that service's vendor. Introducing a new vendor into a service requires an ADR-05 amendment.
+
+## Why
+Prompt tuning is locked to vendor instruction-following. Swapping the vendor inside a service without re-baselining prompts produces silent accuracy regression — and the review agent cannot prove that did not happen.
+
+## Constraints
+- LLM calls always go through the service's abstraction (`ai-llm-abstraction-layer`).
+- Changing a prompt but keeping the vendor is fine; changing the vendor but keeping the prompt is not — requires re-evaluation.
+- Cost / latency data per vendor is logged per call and aggregated into the observability dashboard.
+- When ADR-05 accepts a primary vendor, migration is scoped per-service and includes prompt re-baselining.
+
+## Examples
+
+### Good
+> rate-agent task-routing addition uses Gemini via LiteLLM; prompt added to `prompts/` and invoked through the shared chat helper.
+
+### Bad
+> rate-agent switches a sub-path to Azure OpenAI "for accuracy" with no ADR amendment and no re-baselining.
+
+## Related
+- Rules: `ai-llm-abstraction-layer`, `ai-prompts-as-constants`, `ai-token-budget`.
+- Skills: `llm-prompt-authoring`.
+- Agents: `prompt-review-agent`, `adr-compliance-agent`.
+- ADRs: ADR-05.

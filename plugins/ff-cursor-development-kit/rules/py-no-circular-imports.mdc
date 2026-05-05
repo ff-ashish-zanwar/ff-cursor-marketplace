@@ -1,0 +1,41 @@
+---
+name: py-no-circular-imports
+description: Modules form a DAG
+scope: python
+when-to-apply: Creating or moving modules in Python services
+globs: ["rate-agent/**/*.py", "qa-agent/**/*.py", "rate-extraction-service/**/*.py", "extraction-service/**/*.py"]
+linked-knowledge-base-files:
+  - rate-extraction-service/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Python: no circular imports
+
+## Rule
+Modules form a DAG. If a circular import is forced (e.g., a plugin referring to its host), use a lazy import inside the function that needs the symbol — never at module top level.
+
+## Why
+`rate-extraction-service` explicitly calls out circular imports as forbidden. Cycles surface as `ImportError` at start-up, often only in deployment, and they block refactors.
+
+## Constraints
+- Prefer dependency inversion: move the shared interface to a neutral module.
+- When a lazy import is used, annotate it with a one-line comment explaining why.
+- Avoid `from x import *` — it hides the dependency edge.
+
+## Examples
+
+### Good
+```python
+# plugin.py
+def run(ctx):
+    from host.orchestrator import Orchestrator  # lazy: plugin is registered BY Orchestrator
+    return Orchestrator.current().emit(ctx)
+```
+
+### Bad
+```python
+# plugin.py
+from host.orchestrator import Orchestrator  # top-level cycle: host.orchestrator imports plugin
+```
+
+## Related
+- Rules: `layered-architecture`.
+- Agents: `architecture-agent`.

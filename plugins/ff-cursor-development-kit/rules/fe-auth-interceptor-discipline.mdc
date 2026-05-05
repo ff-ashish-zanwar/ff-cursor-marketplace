@@ -1,0 +1,53 @@
+---
+name: fe-auth-interceptor-discipline
+description: Token injection happens in exactly one place per app
+scope: frontend-universal
+when-to-apply: Touching the HTTP / token injection layer of any frontend
+globs: ["admin-frontend/src/**/*.ts", "quote-ai-frontend/src/**/*.ts", "extraction-frontend/src/**/*.ts", "freightify-web/**/*.interceptor.ts"]
+linked-knowledge-base-files:
+  - freightify-web/.cursor/service-knowledge-base/service-communication.md
+  - admin-frontend/.cursor/ARCHITECTURE.md
+  - quote-ai-frontend/.cursor/architecture.md
+---
+# Frontend auth interceptor discipline
+
+## Rule
+Token injection happens in exactly one place per app:
+- Angular → HTTP interceptor.
+- RTK Query (admin-frontend, quote-ai-frontend) → `prepareHeaders`.
+- `ky` client (quote-ai-frontend) → global `hooks.beforeRequest`.
+
+Exclusions (login endpoint, public health check, third-party services) are explicit, listed, and code-reviewed.
+
+## Why
+Multiple injection sites produce token leaks (sending the Freightify token to third parties) and missing tokens (skipping auth on new endpoints by accident). freightify-web's `service-communication.md` and admin-frontend's `prepareHeaders` pattern both make this explicit.
+
+## Constraints
+- No per-call manual `Authorization: Bearer ...` headers.
+- The exclusion list is a constant at the top of the interceptor, commented with the reason for each entry.
+- Token refresh is a single flow: detect 401, run refresh, retry original request; no duplicate refresh flows.
+- Quote-ai-frontend's dual HTTP clients (Go app + Skipper/EFP) each have their own interceptor tuned to the right issuer — they do not share a token.
+
+## Examples
+
+### Good (RTK prepareHeaders)
+```ts
+baseQuery: fetchBaseQuery({
+  baseUrl: '/api',
+  prepareHeaders: (headers, { endpoint }) => {
+    if (EXCLUDED_ENDPOINTS.has(endpoint)) return headers;
+    const t = store.getState().auth.token;
+    if (t) headers.set('Authorization', `Bearer ${t}`);
+    return headers;
+  },
+});
+```
+
+### Bad
+```ts
+fetch('/api/ports', { headers: { Authorization: `Bearer ${localStorage.getItem('t')}` } });
+```
+
+## Related
+- Rules: `auth-middleware-chain`, `fe-no-silent-failures`, `secrets-management`.
+- Agents: `security-agent`.

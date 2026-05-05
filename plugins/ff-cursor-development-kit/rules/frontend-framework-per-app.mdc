@@ -1,0 +1,43 @@
+---
+name: frontend-framework-per-app
+description: Until ADR-07 resolves, each app keeps its framework stack
+scope: per-app (frontends)
+when-to-apply: Any change that affects framework/version, routing, or state-management strategy
+globs: ["admin-frontend/**/*.{ts,tsx}", "quote-ai-frontend/**/*.{ts,tsx}", "extraction-frontend/**/*.{ts,tsx}", "freightify-web/**/*.ts", "fb-shipper-frontend/**/*.{js,html}"]
+awaits-adr: ADR-07
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-07-frontend-framework.md
+---
+# Frontend framework per app (awaits ADR-07)
+
+## Rule
+Until ADR-07 resolves, each app keeps its framework stack:
+
+- **freightify-web** → Angular 16 + NgRx + Module Federation + PrimeNG.
+- **admin-frontend** → React 18 + CRA + Redux Toolkit + RTK Query + PrimeNG.
+- **extraction-frontend** → React 18 + Vite + React Router + Tailwind.
+- **quote-ai-frontend** → React 19 + Vite + TanStack Router + TanStack Query + Zustand + shadcn/ui.
+- **fb-shipper-frontend** → AngularJS 1.8 (legacy — **migration is an independent priority** regardless of ADR-07).
+- **fb-documents** → Angular 10 custom element.
+
+## Why
+Each stack's conventions (state, routing, testing, build) are mutually incompatible. Mixing within an app breaks the build toolchain and the skill / agent that operates on it. ADR-07 settles the long-term direction; until then, feature work stays in-stack.
+
+## Constraints
+- New features go in the app's existing stack — no "let's introduce React inside freightify-web" without an ADR amendment.
+- AngularJS 1.8 (fb-shipper-frontend) accepts only security-critical fixes; non-critical work should pause pending migration plan.
+- Version upgrades (React 18 → React 19, Angular 16 → 17) follow their own RFC; they do not constitute an ADR-07 decision.
+
+## Examples
+
+### Good
+> New quote-ai-frontend feature: React 19 + TanStack Query custom hook + Zustand slice for local UI state.
+
+### Bad
+> New quote-ai-frontend feature: introduces Redux Toolkit "because it's in admin-frontend" without an ADR amendment.
+
+## Related
+- Rules: `frontend-design-system-per-app`, `fe-no-business-logic-in-ui`, `ng-layered-feature-domain-data-ui`.
+- Skills: `feature-development-angular`, `feature-development-react`.
+- Agents: `architecture-agent`, `adr-compliance-agent`.
+- ADRs: ADR-07.

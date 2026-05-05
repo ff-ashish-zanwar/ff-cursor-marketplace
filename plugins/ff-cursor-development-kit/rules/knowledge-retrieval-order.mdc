@@ -1,0 +1,43 @@
+---
+name: knowledge-retrieval-order
+description: Read in this exact order before answering any question about the code
+scope: workspace-universal
+when-to-apply: Before any code reasoning, task planning, or search for "how we do X"
+globs: ["**/*"]
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/01-EFP/ai-agent-routing-guide.md
+  - efp-ai-knowledge-base/dictionaries/lookups.json
+  - efp-ai-knowledge-base/ai-brain/service-cards/
+  - efp-ai-knowledge-base/ai-brain/building-block-to-services.json
+  - every <repo>/.cursor/agent.md
+---
+# Knowledge retrieval order
+
+## Rule
+Read in this exact order before answering any question about the code:
+1. `efp-ai-knowledge-base/dictionaries/lookups.json` — resolve acronyms, aliases, domain terms.
+2. `efp-ai-knowledge-base/ai-brain/` — service cards, cross-service map, ownership matrix, gaps-and-risks, decision log.
+3. `efp-ai-knowledge-base/01-EFP/` — overview, system map, glossary, routing guide, building blocks, workflows, database model, system architecture.
+4. `<repo>/.cursor/agent.md` → `<repo>/.cursor/architecture.md` → `<repo>/.cursor/service-knowledge-base/*.md`.
+5. Repo source code only when the `.cursor/` layer is silent.
+
+## Why
+Every `<repo>/.cursor/agent.md` opens with the same checklist: consult the knowledge base first. `ai-agent-routing-guide.md` encodes the mandatory step ordering. Skipping it produces confident-sounding but fabricated answers — exactly what `no-invented-facts.md` forbids.
+
+## Constraints
+- Never start from the source tree when the question matches a domain concept; resolve the concept via `lookups.json` + service cards first.
+- When the ai-brain contradicts the source code, trust the source code and flag the ai-brain file for refresh in `/gap-report`.
+- Record any file you had to open below the `.cursor/` layer as a gap (the `.cursor/` layer should have covered it).
+
+## Examples
+
+### Good
+> Task: "Add a field to FRLC." Read order: lookups.json (FRLC = Freight Rate Level Charges) → `ai-brain/service-cards/fb-rates-go.md` (owner) → `fb-rates-go/.cursor/service-knowledge-base/core-components.md` → source.
+
+### Bad
+> Grepping the entire workspace for "FRLC" without resolving it via `lookups.json`, then guessing from match density.
+
+## Related
+- Skills: every skill inherits this as step 0.
+- Agents: `router-agent`, `planner-agent`.
+- ADRs: none.

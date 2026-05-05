@@ -1,0 +1,46 @@
+---
+name: ts-rtk-query-slices
+description: Each domain has its own RTK Query API slice
+scope: node-ts (React frontends using RTK Query)
+when-to-apply: Adding a data-fetching surface in admin-frontend or quote-ai-frontend's RTK Query layer
+globs: ["admin-frontend/src/**/*.ts", "admin-frontend/src/**/*.tsx", "quote-ai-frontend/src/**/*.ts"]
+linked-knowledge-base-files:
+  - admin-frontend/.cursor/ARCHITECTURE.md
+  - admin-frontend/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# RTK Query slice discipline
+
+## Rule
+Each domain has its own RTK Query API slice. Queries and mutations declare `providesTags` / `invalidatesTags` explicitly; manual cache refresh is a last resort.
+
+## Why
+admin-frontend and quote-ai-frontend rely on tag-based cache invalidation to stay consistent across many screens. Ad hoc `refetch()` calls or duplicate slices produce stale UIs and double-fetching.
+
+## Constraints
+- One slice per domain (`portsApi`, `carriersApi`, `ratesApi`, `quotesApi`, etc.). Do not mix unrelated endpoints in one slice.
+- `prepareHeaders` injects the auth token consistently (Keycloak OIDC bearer for admin-frontend; quote-ai-backend token for quote-ai-frontend).
+- Every query declares `providesTags: [{ type, id }]`. Every mutation declares `invalidatesTags`.
+- Base URL comes from environment config, not hardcoded.
+- Error transformation maps backend error envelope to a uniform RTK error shape.
+
+## Examples
+
+### Good
+```ts
+export const portsApi = createApi({
+  reducerPath: 'ports',
+  tagTypes: ['Port'],
+  baseQuery: authBaseQuery('/api'),
+  endpoints: (b) => ({
+    listPorts: b.query({ query: () => '/ports', providesTags: (r) => r ? r.map(p => ({ type: 'Port', id: p.id })) : [] }),
+    createPort: b.mutation({ query: (p) => ({ url: '/ports', method: 'POST', body: p }), invalidatesTags: ['Port'] }),
+  }),
+});
+```
+
+### Bad
+> `fetch('/api/ports')` inside a component with `useEffect` + `useState` — no cache, no invalidation.
+
+## Related
+- Rules: `fe-api-response-normalization`, `fe-auth-interceptor-discipline`.
+- Agents: `architecture-agent`, `code-review-agent`.

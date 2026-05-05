@@ -1,0 +1,44 @@
+---
+name: api-contract-first
+description: Update the contract before writing the handler
+scope: workspace-universal
+when-to-apply: Adding or modifying any HTTP endpoint or async message contract
+globs: ["**/openapi*.{yaml,json}", "**/schemas/**", "**/*.pydantic.py", "**/validation/**", "**/dto/**"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/security.md
+  - admin-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# API contract first
+
+## Rule
+Update the contract before writing the handler. "Contract" is:
+- OpenAPI / JSON Schema for REST.
+- Pydantic model for Python services.
+- AJV schema for Node/TS services.
+- Go struct with `json:` tags + a schema file for Go services.
+- Published event payload struct for queue / topic contracts.
+
+Handlers read from the validated contract object, not from raw request bodies.
+
+## Why
+Schema-before-handler catches shape drift early, produces client SDKs as a byproduct, and lets reviewers see the wire change independently of the business logic change. It is a stated expectation in every backend `coding-guidelines.md`.
+
+## Constraints
+- Breaking contract changes require a version bump (path segment or header) and a deprecation plan.
+- Non-breaking changes (new optional fields) are safe but still require schema commit.
+- Async event payload changes follow `event-contract-authoring` skill.
+- The `contract-agent` verifies the schema was updated before code was; missing schema blocks the review gate.
+
+## Examples
+
+### Good
+> PR includes `openapi/rates.yaml` (adds new `frlcCategory` field) and handler change that references the new field via the validated type.
+
+### Bad
+> Handler adds `frlcCategory` parsing off `c.Request.Body`, no schema update.
+
+## Related
+- Skills: `go-gin-api-authoring`, `node-ts-express-authoring`, `python-fastapi-authoring`, `event-contract-authoring`, `error-envelope-authoring`.
+- Agents: `contract-agent`.
+- ADRs: ADR-04 (error envelope shape is part of the contract surface).

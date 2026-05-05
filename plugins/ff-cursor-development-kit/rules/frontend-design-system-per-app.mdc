@@ -1,0 +1,43 @@
+---
+name: frontend-design-system-per-app
+description: Until ADR-08 resolves, each app keeps its design system
+scope: per-app (frontends)
+when-to-apply: Adding a new component, screen, or visual element
+globs: ["admin-frontend/src/**/*.tsx", "quote-ai-frontend/src/**/*.tsx", "extraction-frontend/src/**/*.tsx", "freightify-web/**/*.component.html"]
+awaits-adr: ADR-08
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-08-frontend-design-system.md
+---
+# Frontend design system per app (awaits ADR-08)
+
+## Rule
+Until ADR-08 resolves, each app keeps its design system:
+
+- **freightify-web, admin-frontend** → PrimeNG / PrimeReact.
+- **extraction-frontend** → Tailwind only, no component library.
+- **quote-ai-frontend** → shadcn/ui on Tailwind.
+- **fb-shipper-frontend, fb-documents** → legacy Angular-native components.
+
+New components use the app's existing system.
+
+## Why
+Mixing libraries inside one app produces double style bundles, inconsistent keyboard / a11y behavior, and a cluttered dependency tree. ADR-08 decides the long-term direction; in the meantime, apps stay coherent.
+
+## Constraints
+- Don't introduce a second component library into an existing app.
+- Shared brand tokens (colors, type scale, spacing) — if produced — live in a shared package and are consumed as variables, not as a second component library.
+- Custom components wrap the app's library's primitives (`<PrimeButton>`, `<shadcn/Button>`) rather than re-rolling them.
+- Accessibility expectations (keyboard nav, ARIA roles) travel with the library's idioms.
+
+## Examples
+
+### Good
+> New quote-ai-frontend dialog uses `shadcn/Dialog` with Tailwind utility classes; matches existing app idioms.
+
+### Bad
+> New quote-ai-frontend dialog pulls in `@primer/react` "because it has a nicer modal."
+
+## Related
+- Rules: `frontend-framework-per-app`, `fe-no-business-logic-in-ui`.
+- Agents: `architecture-agent`, `adr-compliance-agent`.
+- ADRs: ADR-08.

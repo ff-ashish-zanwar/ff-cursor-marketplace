@@ -1,0 +1,53 @@
+---
+name: error-envelope
+description: Until ADR-04 resolves, each service keeps its current envelope shape but every error response **must** carry
+scope: workspace-universal (backend)
+when-to-apply: Any new error path or HTTP error response shape
+globs: ["**/error*.{go,ts,py}", "**/errors.{go,ts,py}", "**/handler*.{go,ts,py}", "**/middleware/**"]
+awaits-adr: ADR-04
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-04-error-envelope.md
+---
+# Error envelope (awaits ADR-04)
+
+## Rule
+Until ADR-04 resolves, each service keeps its current envelope shape but every error response **must** carry:
+
+- `code` — `UPPER_SNAKE_CASE` machine-readable code.
+- `message` — human-readable.
+- `correlationId` — UUID matching the inbound request's correlation ID.
+
+Additional fields (`details`, `timestamp`) are permitted; absent fields are not.
+
+## Why
+The envelope split (Go vs TS vs Python service returns) makes cross-service error handling brittle. Requiring the three load-bearing fields *now* lets clients start relying on them; when ADR-04 settles the full shape, the migration is additive rather than destructive.
+
+## Constraints
+- Central error middleware owns envelope construction; handlers raise typed errors (see `typed-error-handling`) and never write envelope fields directly.
+- `correlationId` is extracted from request context, not re-generated at error time.
+- Error codes live in a per-service constants file so clients can diff them.
+- API-key callback errors use the same envelope as JWT-authenticated errors.
+
+## Examples
+
+### Good
+```json
+{
+  "error": {
+    "code": "TENANT_NOT_FOUND",
+    "message": "No tenant matches vendorId xyz.",
+    "correlationId": "3a2b..."
+  }
+}
+```
+
+### Bad
+```json
+{ "error": "tenant missing" }
+```
+
+## Related
+- Rules: `typed-error-handling`, `api-contract-first`, `structured-logging`.
+- Skills: `error-envelope-authoring`.
+- Agents: `contract-agent`.
+- ADRs: ADR-04.

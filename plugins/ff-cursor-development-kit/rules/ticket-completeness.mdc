@@ -1,0 +1,41 @@
+---
+name: ticket-completeness
+description: `/implement` refuses unless the JIRA ticket has
+scope: workspace-universal (JIRA pipeline)
+when-to-apply: Every `/implement`, `/bugfix`, `/plan`, `/triage` invocation
+globs: []
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/01-EFP/ai-agent-routing-guide.md
+---
+# Ticket completeness
+
+## Rule
+`/implement` refuses unless the JIRA ticket has:
+1. A clear problem statement / user story.
+2. Acceptance criteria (at least one).
+3. The ticket is assigned to the invoking developer (configurable via `--any-assignee`).
+
+Bug tickets (`/bugfix`) additionally require **reproduction steps**.
+
+JIRA workflow status is **not** part of this rule. The pipeline accepts a ticket in any status (`To Do`, `In Progress`, `In Review`, `Done`, etc.). The ticket's status is captured into the intake for traceability but does not gate the pipeline, and the pipeline never transitions the ticket.
+
+## Why
+The `ai-agent-routing-guide.md` mandatory checklist (step 1) treats ticket intake as a hard gate. Running the pipeline on an under-specified ticket produces fabricated acceptance criteria, missed edge cases, and wasted review cycles.
+
+## Constraints
+- `ticket-completeness-agent` is the enforcer; it posts back a specific list of what's missing.
+- The developer updates the JIRA ticket and re-runs; the pipeline does not auto-write acceptance criteria into JIRA.
+- `/plan` and `/triage` can run against a ticket missing acceptance criteria, but their output is labelled "speculative" and cannot feed into `/implement` until criteria are added.
+
+## Examples
+
+### Good
+> Ticket EFP-1234: "Add FRLC category tag to tariff export. Acceptance: export CSV contains a new `frlcCategory` column; value matches the persisted field; existing exports unaffected."
+
+### Bad
+> Ticket EFP-1234: "FRLC category stuff".
+
+## Related
+- Agents: `ticket-completeness-agent`, `jira-agent`.
+- Commands: `/implement`, `/bugfix`, `/plan`, `/triage`.
+- Rules: `human-approval-gates`.

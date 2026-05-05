@@ -1,0 +1,52 @@
+---
+name: base-branch-selection
+description: Immediately after Gate 1 approves the plan — and **before** the coder-agent writes any code — `base-branch-picker-agent`
+scope: workspace-universal (pipeline)
+when-to-apply: Immediately after Gate 1 passes in `/implement` or `/bugfix`, before the coder-agent runs
+globs: []
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-workflow/walkthrough-findings.md
+---
+# Base branch selection
+
+## Rule
+Immediately after Gate 1 approves the plan — and **before** the coder-agent writes any code — `base-branch-picker-agent`:
+
+1. For each affected repo, asks the developer which base branch to build on. It offers the repo's convention (`development` or `main` — detected from the default branch) as the default. This prompt is typically folded into Gate 1's reply so it is one interaction, not two.
+2. Verifies the working tree is clean (`git status --porcelain` empty). A dirty tree halts the pipeline with the list of offending files — the agent never stashes, never commits on the current branch.
+3. Runs `git fetch origin`, then `git checkout -b ai/<JIRA-KEY>-<short-slug> origin/<chosen-base>`. The developer is now on the feature branch, with a working tree that matches `origin/<chosen-base>`.
+4. Hands off to the coder-agent, which commits onto this branch.
+
+The pipeline **stops after Gate 2 approves**. It never pushes, never opens a merge request.
+
+## Why
+Developer directive from 2026-04-20 (no MR automation) + 2026-04-21 refinement (Model C: pick base first, then code on it). Version control is GitLab, but integrating MR automation into the pipeline would couple the workflow to GitLab specifics and remove human judgment about MR timing, reviewers, and description quality.
+
+The Model C ordering (pick base → branch → code → review) replaces the earlier "code on whatever branch, cherry-pick later" flow. Reviewers must review the exact diff the MR will show; cherry-picking or rebasing after approval would mean the 14 review agents reviewed something that isn't shipping, and any conflict with `origin/<base>` would surface after Gate 2 already passed.
+
+## Constraints
+- Never push to remote; never call `gh` / `glab` / any MR API.
+- Never force-push; never amend an existing commit on a shared branch.
+- Never stash the developer's working tree. Dirty tree = halt with a clear message, not hidden state.
+- Never commit on the developer's starting branch. Feature-branch creation and commits both happen on `ai/<JIRA-KEY>-<short-slug>`.
+- Feature branches are created off `origin/<chosen-base>` (freshly fetched), not the developer's local `<chosen-base>`.
+- Commit message (written by the coder-agent, not the picker) includes the JIRA key, a one-line summary, and a reference to `task-history/<JIRA-KEY>.md`.
+- If the chosen base branch is protected (e.g., `main`), fail loudly and ask the developer to pick a different base.
+- If the repo has an unpushed local commit matching `ai/<JIRA-KEY>`, resume from it rather than creating a duplicate.
+
+## Examples
+
+### Good
+> At Gate 1, developer replies: `approve; fb-rates-go=development, admin-backend=release/2026.04`. `base-branch-picker-agent` verifies clean tree in both repos, runs `git fetch origin` + `git checkout -b ai/EFP-1234-frlc-category origin/development` in fb-rates-go and `... origin/release/2026.04` in admin-backend. Coder-agent commits onto each feature branch. Gate 2 approves. Pipeline stops. Developer raises the MR.
+
+### Bad
+> `base-branch-picker-agent` detects a dirty working tree in fb-rates-go and runs `git stash` to "unblock" the pipeline. (Never stash — halt and let the developer decide.)
+
+> Coder-agent commits on `qa` first, then the picker tries to cherry-pick onto `origin/development`, hitting a conflict Gate 2 already approved through. (Model B / cherry-pick flow — explicitly rejected in favor of Model C.)
+
+> Agent auto-pushes to remote and opens an MR without asking.
+
+## Related
+- Agents: `base-branch-picker-agent`, `coder-agent`.
+- Skills: `base-branch-picker`.
+- Rules: `human-approval-gates`.

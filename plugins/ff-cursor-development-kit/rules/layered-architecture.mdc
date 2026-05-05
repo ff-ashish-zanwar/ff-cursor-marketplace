@@ -1,0 +1,61 @@
+---
+name: layered-architecture
+description: Controller → Service → Repository
+scope: workspace-universal (backend)
+when-to-apply: Any new handler / endpoint / feature in a backend service
+globs: ["**/*.go", "**/*.ts", "**/*.py"]
+linked-knowledge-base-files:
+  - fb-rates-go/.cursor/service-knowledge-base/coding-guidelines.md
+  - admin-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - fb-iqs/.cursor/service-knowledge-base/coding-guidelines.md
+  - quote-ai-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
+---
+# Layered architecture
+
+## Rule
+Controller → Service → Repository. HTTP handlers do input parsing and delegation only. Business logic lives in services. Data access lives in repositories. No layer skips.
+
+## Why
+Every backend `coding-guidelines.md` in the workspace mandates this split. Violations concentrate business logic in handlers, break testability, and couple HTTP concerns to data access.
+
+## Constraints
+- Controllers: parse request, validate shape, call service, serialize response. No DB calls, no cross-service HTTP calls.
+- Services: orchestrate; hold business rules; no direct HTTP response writes.
+- Repositories: the only layer that talks to MongoDB / MySQL / DynamoDB / Datastore / Redis / OpenSearch. Use the base-repository pattern where the language provides one.
+- Outbound HTTP goes through a typed proxy (`BaseProxy`), not ad hoc `axios` / `http.Client` calls.
+- Never instantiate a DB client inside a handler or a service.
+
+## Examples
+
+### Good (Go)
+```go
+// controller
+func (h *RateHandler) Search(c *gin.Context) {
+    var req SearchRequest
+    if err := c.ShouldBindJSON(&req); err != nil { ... }
+    resp, err := h.svc.Search(c.Request.Context(), req)
+    // write resp
+}
+
+// service
+func (s *RateService) Search(ctx context.Context, req SearchRequest) (*SearchResult, error) {
+    tenant := tenant.FromContext(ctx)
+    rates, err := s.repo.FindRates(ctx, tenant, req.ToFilter())
+    ...
+}
+```
+
+### Bad
+```go
+func (h *RateHandler) Search(c *gin.Context) {
+    // DB call inside the handler — forbidden
+    rows := h.mongo.Collection("tariff_freight_rates").Find(...)
+    ...
+}
+```
+
+## Related
+- Skills: `go-gin-api-authoring`, `node-ts-express-authoring`, `python-fastapi-authoring`.
+- Agents: `architecture-agent`, `code-review-agent`.
+- Related rules: `go-base-repository-pattern`, `ts-express-layering`, `go-proxy-pattern`.

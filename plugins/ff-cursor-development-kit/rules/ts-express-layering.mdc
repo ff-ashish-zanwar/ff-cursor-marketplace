@@ -1,0 +1,51 @@
+---
+name: ts-express-layering
+description: Node/TS Express layers: `route → middleware → controller → service → repository / proxy`
+scope: node-ts (admin-backend)
+when-to-apply: Adding or changing an admin-backend route
+globs: ["admin-backend/**/*.ts"]
+linked-knowledge-base-files:
+  - admin-backend/.cursor/service-knowledge-base/coding-guidelines.md
+  - admin-backend/.cursor/architecture.md
+---
+# TS Express layering
+
+## Rule
+Node/TS Express layers: `route → middleware → controller → service → repository / proxy`. All routes register in `src/routes.ts`. Repositories extend `BaseRepository`; outbound clients extend `BaseProxy` (Axios).
+
+## Why
+`admin-backend`'s `coding-guidelines.md` mandates this structure. Scattered route registration across feature folders has previously caused forgotten middleware.
+
+## Constraints
+- Every route is added to `src/routes.ts`; no ad hoc `app.get(...)` elsewhere.
+- `auditLogger` middleware wraps mutating routes; `checkPermission` wraps role-gated routes.
+- Repositories extend `BaseRepository<TModel>`; outbound HTTP clients extend `BaseProxy`.
+- Handlers read from AJV-validated DTOs (`json-schema-validation` rule); services never see raw `req.body`.
+- Controllers translate typed errors to envelopes via the central error middleware (`typed-error-handling`).
+
+## Examples
+
+### Good
+```ts
+// src/routes.ts
+router.post('/ports', auditLogger, checkPermission('MASTER_DATA_WRITE'), validate(PortSchema), PortController.create);
+
+// controller
+class PortController {
+  static create = async (req, res, next) => {
+    try { const p = await PortService.create(req.validated); res.status(201).json(p); }
+    catch (e) { next(e); }
+  };
+}
+```
+
+### Bad
+```ts
+// Route defined inside a feature file, middleware skipped
+app.post('/ports', async (req, res) => { await repo.insertOne(req.body); res.json(...); });
+```
+
+## Related
+- Rules: `layered-architecture`, `json-schema-validation`, `typed-error-handling`.
+- Skills: `node-ts-express-authoring`.
+- Agents: `architecture-agent`.
