@@ -31,7 +31,7 @@ jira-agent
   → stop (developer raises the MR)
 ```
 
-Every agent above MUST banner per [`agent-attribution`](../rules/agent-attribution.md) before its output. The 14 reviewers share one grouped banner (`▸ review-agents (×14, parallel) — analysing the committed diff`); per-reviewer banners are suppressed.
+Every agent above MUST banner per [`agent-attribution`](../rules/agent-attribution.md) before its output — H3 heading `### ▸ [<N>/11] <agent-name>` on line 1, italic action on line 2. The 14 reviewers share one grouped banner (`### ▸ [8/11] review-agents (×14, parallel)` / `*analysing the committed diff*`); per-reviewer banners are suppressed.
 
 ## Review-aggregator step (between reviewers and Gate 2)
 
@@ -60,10 +60,10 @@ The `/implement` orchestrator — not the individual reviewers — performs this
    — Posted by /implement before Gate 2.
    ```
 3. POST the comment to the JIRA ticket (see [`jira-write-permissions`](../rules/jira-write-permissions.md) — comment-add is allowed; deletes are universally forbidden).
-4. Banner `▸ review-aggregator — posting consolidated findings to JIRA-<KEY>`, then once posted, banner `▸ Gate 2 — waiting for your approval (review the consolidated JIRA comment first)`.
+4. Banner `### ▸ [9/11] review-aggregator` / `*posting consolidated findings to JIRA-<KEY>*`, then once posted, banner `### ▸ [10/11] Gate 2` / `*waiting for your approval (review the consolidated JIRA comment first)*`.
 5. Emit the Gate 2 prompt verbatim per [`human-approval-gates`](../rules/human-approval-gates.md).
 
-If any reviewer returns a **Blocker**, the orchestrator still posts the consolidated comment (so the developer has a record), but halts before Gate 2 with `▸ review-aggregator — HALT before Gate 2: <N> Blocker finding(s) — see JIRA-<KEY>`. The developer fixes on the feature branch and re-runs.
+If any reviewer returns a **Blocker**, the orchestrator still posts the consolidated comment (so the developer has a record), but halts before Gate 2 with the heading banner `### ▸ [9/11] review-aggregator` / `*HALT before Gate 2: <N> Blocker finding(s) — see JIRA-<KEY>*`. The developer fixes on the feature branch and re-runs.
 
 ## Required skills
 `jira-ticket-parser`, `building-block-router`, `plan-and-implement`, `go-gin-api-authoring` / `node-ts-express-authoring` / `python-fastapi-authoring` (as needed), `mongo-schema-change` / `mysql-schema-change` / `datastore-kind-change` (as needed), `event-contract-authoring`, `proxy-integration`, `base-branch-picker`, `task-history-writer`.
@@ -82,6 +82,17 @@ If any reviewer returns a **Blocker**, the orchestrator still posts the consolid
 - Review agents return findings to the orchestrator only; they do not call the JIRA API themselves (`jira-write-permissions`).
 - Every agent banners per `agent-attribution` so the developer can see which agent is acting at every step.
 - If any review agent returns a Blocker finding, the pipeline halts before Gate 2. The commit stays on the feature branch; the developer fixes in place and re-runs.
+- **Post-Gate-2 finalize**: when the developer approves Gate 2, the orchestrator MUST (1) call `task-history-writer` with phase `gate-2` to append the final section to `ai-brain/task-history/<KEY>.md`, (2) verify the file exists with `last-phase: gate-2` stamped, (3) emit the completion panel per `pipeline-checklist`. The run does not end until all three are done. See `human-approval-gates` constraints.
+
+## Completion panel (after Gate 2 approve)
+
+The orchestrator emits a single panel to chat in this exact structure:
+
+1. **Phase checklist** — markdown table per `pipeline-checklist`, one row per phase, status `DONE` / `SKIPPED` / `HALTED` / `N/A`. Row `0` is `/implement <KEY> (invoked)`. Last row is `task-history finalized` with the file path in parens.
+2. **Summary table** — rows: `Repo`, `Feature branch`, `Base`, `Commit`, `File(s) changed`, `Review result`, `JIRA comment`, `Task history`. The `Task history` row MUST contain the verified file path (`efp-ai-knowledge-base/ai-brain/task-history/<KEY>.md`).
+3. **Your next step — raise the MR** block — `cd <repo>` and `git push origin <feature-branch>` per affected repo, plus "open a Merge Request on GitLab from `<feature-branch>` → `<base>`".
+
+If task-history verification fails in step (1) of the finalize sequence, the orchestrator MUST NOT emit "complete" — it emits the halt banner (`### ▸ [11/11] task-history finalize` / `*HALT after Gate 2: finalize failed at ai-brain/task-history/<KEY>.md*`) and stops. This is the only signal that the file is missing.
 
 ## Failure handling
 Any agent failure halts the pipeline, records the failure in the task-history, and (unless `--no-jira-comment`) posts a JIRA comment summarising what's missing. The pipeline never transitions the ticket — its workflow status is left exactly as the developer set it.
@@ -91,4 +102,4 @@ If the developer re-invokes `/implement <KEY>`, the pipeline reads `last-phase` 
 
 ## Related
 - Commands: `/bugfix`, `/plan`, `/triage`.
-- Rules: `ticket-completeness`, `human-approval-gates`, `base-branch-selection`, `jira-write-permissions`, `agent-attribution`.
+- Rules: `ticket-completeness`, `human-approval-gates`, `base-branch-selection`, `jira-write-permissions`, `agent-attribution`, `pipeline-checklist`.

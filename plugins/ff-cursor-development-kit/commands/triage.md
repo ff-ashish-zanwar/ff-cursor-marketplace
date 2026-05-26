@@ -22,6 +22,7 @@ jira-agent → ticket-completeness-agent → router-agent → stop
 
 ## Outputs
 - `task-history/<KEY>.md` populated with `## Intake` + `## Routing` + `## Completeness`.
+- A **completion checklist** per [`pipeline-checklist`](../rules/pipeline-checklist.md) at termination, listing each phase that ran. Rows for `planner-agent` through `Gate 2` are marked `N/A`.
 
 ## Typical uses
 - Incoming ticket review: decide whether to pick it up.

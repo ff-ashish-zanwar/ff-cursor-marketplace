@@ -35,7 +35,10 @@ Same as `/implement`, plus an `## RCA` section in the task-history file between 
 - Fix without regression test is rejected by `test-agent`.
 - Fixing the symptom without the root cause is rejected at Gate 1.
 
+The post-Gate-2 finalize + completion panel are identical to `/implement` — see [`commands/implement.md`](implement.md) "Completion panel". For `/bugfix`, the checklist row for `rca-agent` is `DONE` (it's `N/A` on `/implement`).
+
 ## Related
 - Commands: `/implement`, `/plan`, `/triage`.
 - Agents: `rca-agent`, `test-agent`.
-- Skills: `bug-fix`.
+- Skills: `bug-fix`, `task-history-writer`.
+- Rules: `pipeline-checklist`, `human-approval-gates`, `jira-write-permissions`, `agent-attribution`.

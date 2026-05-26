@@ -23,6 +23,7 @@ jira-agent → ticket-completeness-agent → router-agent → planner-agent → 
 ## Outputs
 - `task-history/<KEY>.md` populated through `## Plan`.
 - No Gate 1; no code.
+- A **completion checklist** per [`pipeline-checklist`](../rules/pipeline-checklist.md) at termination, listing each phase that ran (`jira-agent`, `ticket-completeness-agent`, `router-agent`, `planner-agent`, `task-history finalized`). Rows for `Gate 1` through `Gate 2` are marked `N/A`.
 
 ## Quality gates
 - Relaxed `ticket-completeness`: `/plan` may run on a ticket missing acceptance criteria but labels the plan `speculative` and cannot be promoted to `/implement` until criteria are added.

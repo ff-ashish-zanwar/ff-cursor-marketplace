@@ -1,6 +1,6 @@
 ---
 name: agent-attribution
-description: Every agent prints a **one-line banner** to chat before any other output, so the developer can see the four-layer chain (Command → Agent → Skill → Rule) play out live
+description: Every agent prints a **two-line banner** to chat before any other output, so the developer can see the four-layer chain (Command → Agent → Skill → Rule) play out live and clearly track progress through the pipeline
 scope: workspace-universal (pipeline output)
 when-to-apply: Every agent invocation that emits chat output during `/implement`, `/bugfix`, `/plan`, `/triage`, `/route`, `/db-impact`
 globs: []
@@ -10,71 +10,109 @@ linked-knowledge-base-files:
 # Agent attribution
 
 ## Rule
-Every agent prints a **one-line banner** to chat before any other output, so the developer can see the four-layer chain (Command → Agent → Skill → Rule) play out live.
+Every agent prints a **two-line banner** to chat before any other output, so the developer can see the four-layer chain (Command → Agent → Skill → Rule) play out live and clearly track progress through the pipeline.
 
 ### Banner format
 
-```
-▸ <agent-name> — <short present-tense action, ≤ 8 words>
+```markdown
+### ▸ [<N>/<TOTAL>] <agent-name>
+*<short present-tense action, ≤ 8 words>*
 ```
 
-- Leading character is `▸` (single unicode triangle, low-token, scannable).
+- Line 1 is a markdown H3 heading (`###`) — renders large and bold in Cursor chat, scannable when scrolling.
+- Line 2 is the action in italics (`*...*`) — subtle, doesn't compete with the heading.
+- `▸` triangle stays as the visual anchor at the start of the heading.
+- `[<N>/<TOTAL>]` is the phase counter (e.g., `[1/11]`). `N` is this phase's index; `TOTAL` is the number of required banners for the current command — see [`pipeline-checklist`](pipeline-checklist.md) "Required phases per command":
+  - `/implement` → `TOTAL = 11` (jira-agent through task-history finalize)
+  - `/bugfix` → `TOTAL = 12` (adds `rca-agent`)
+  - `/plan` → `TOTAL = 5`
+  - `/triage` → `TOTAL = 4`
 - Agent name matches the agent's file name without the `.md` (e.g., `ticket-completeness-agent`, `base-branch-picker-agent`).
-- Action is what the agent is *about to do* in this turn, not a generic role description.
-- One banner per phase. If an agent re-enters (e.g., after `revise`), it banners again with the new action.
+- Action is what the agent is *about to do* in this turn — not a generic role description.
+- One banner per phase. If an agent re-enters (e.g., after Gate 1 `revise`), it banners again with the same `[N/TOTAL]` counter (the developer can see they're re-entering, not advancing).
 
 ### Gate banners
 Approval gates also banner — they are pipeline checkpoints the developer interacts with:
 
+```markdown
+### ▸ [5/11] Gate 1
+*waiting for your approval (plan + per-repo base branches)*
 ```
-▸ Gate 1 — waiting for your approval (plan + per-repo base branches)
-▸ Gate 2 — waiting for your approval (review the consolidated JIRA comment first)
+
+```markdown
+### ▸ [10/11] Gate 2
+*waiting for your approval (review the consolidated JIRA comment first)*
 ```
 
 ### Parallel reviewers
 The 14 review agents run in parallel under one orchestrator banner — not 14 separate banners (would be noisy and costly). Use:
 
-```
-▸ review-agents (×14, parallel) — analysing the committed diff
+```markdown
+### ▸ [8/11] review-agents (×14, parallel)
+*analysing the committed diff*
 ```
 
 When all 14 return, the orchestrator emits one more banner before posting to JIRA:
 
+```markdown
+### ▸ [9/11] review-aggregator
+*posting consolidated findings to JIRA-<KEY>*
 ```
-▸ review-aggregator — posting consolidated findings to JIRA-<KEY>
+
+### Finalize banner
+After Gate 2 approval, the orchestrator banners the finalize step (writing + verifying the task-history file) before the completion panel:
+
+```markdown
+### ▸ [11/11] task-history finalize
+*writing gate-2 section and verifying ai-brain/task-history/<KEY>.md*
 ```
 
 ### Halts and failures
-When an agent halts the pipeline, the banner names the agent that halted:
+When an agent halts the pipeline, the banner names the agent that halted — keep the heading style but make the action line start with `HALT:` in italics:
 
-```
-▸ ticket-completeness-agent — HALT: missing acceptance criteria, ticket unassigned
+```markdown
+### ▸ [2/11] ticket-completeness-agent
+*HALT: missing acceptance criteria, ticket unassigned*
 ```
 
 ## Why
-Without attribution, the developer sees disembodied PASS/FAIL/HALT output and has no idea which agent ran or which to debug. Naming the agent makes the four-layer chain visible, which is exactly what the workflow's design intent (`getting-started.md` §3.5) promises. The cost is tiny — about 5 tokens per banner — and the readability gain is substantial.
+Without attribution, the developer sees disembodied PASS/FAIL/HALT output and has no idea which agent ran or which to debug. Naming the agent makes the four-layer chain visible, which is exactly what the workflow's design intent (`getting-started.md` §3.5) promises. The H3 heading + counter format makes individual phases scannable when scrolling a long pipeline run — the developer can jump to any phase by eye, and the `[N/TOTAL]` counter tells them how far through the pipeline they are at a glance.
 
 ## Constraints
 - **One banner per phase, not per sub-step.** Don't banner every file read or every tool call inside an agent's turn.
-- **No emoji.** Keep it terminal-clean and low-token.
-- **No status colours / markdown headers / horizontal rules.** Just the single triangle prefix line.
+- **No emoji.** Keep it clean and low-token; the H3 heading already provides strong visual distinction.
+- **Always two lines** — H3 heading on line 1, italic action on line 2. Never collapse to one line.
+- **Counter is mandatory.** `[<N>/<TOTAL>]` always appears; if `TOTAL` is unknown (rare — only for non-pipeline commands), use `[<N>]` alone.
 - **Action line is not the agent's full role.** "checking AC, assignee, repro steps" — not "Enforces the ticket-completeness rule for every JIRA-touching command."
 - **Reviewers MUST use the single grouped banner.** Even if some finish earlier than others, the orchestrator suppresses per-reviewer banners.
 - **Do not banner for read-only sub-agents inside another agent's turn** (e.g., a skill called by an agent does not banner — only the agent does).
 
 ## Examples
 
-### Good
-```
-▸ jira-agent — fetching EFP-1423 from JIRA
+### Good (excerpt from a healthy `/implement` run)
+```markdown
+### ▸ [1/11] jira-agent
+*fetching EFP-1423 from JIRA*
+
 ... intake JSON ...
-▸ ticket-completeness-agent — checking AC, assignee, repro steps
+
+### ▸ [2/11] ticket-completeness-agent
+*checking AC, assignee, repro steps*
+
 ... PASS / FAIL table ...
-▸ router-agent — resolving building-block → owning services
+
+### ▸ [3/11] router-agent
+*resolving building-block → owning services*
+
 ... routing JSON ...
-▸ planner-agent — drafting cross-repo plan
+
+### ▸ [4/11] planner-agent
+*drafting cross-repo plan*
+
 ... plan ...
-▸ Gate 1 — waiting for your approval (plan + per-repo base branches)
+
+### ▸ [5/11] Gate 1
+*waiting for your approval (plan + per-repo base branches)*
 ```
 
 ### Bad
@@ -85,7 +123,7 @@ Without attribution, the developer sees disembodied PASS/FAIL/HALT output and ha
 **Planner Output:**
 ...
 ```
-(emoji noise, inconsistent prefixes, no consistent naming)
+(emoji noise, inconsistent prefixes, no consistent naming, no counter)
 
 ```
 ▸ jira-agent — starting
@@ -93,7 +131,12 @@ Without attribution, the developer sees disembodied PASS/FAIL/HALT output and ha
 ▸ jira-agent — parsing response
 ▸ jira-agent — writing intake
 ```
-(banner per sub-step instead of one per phase)
+(banner per sub-step instead of one per phase; old one-line format; no counter)
+
+```
+### ▸ jira-agent
+```
+(missing the action line and the counter)
 
 ## Related
 - Skills: every skill that's invoked by an agent (skills do not banner on their own).

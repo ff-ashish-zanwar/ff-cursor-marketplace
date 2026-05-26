@@ -1,0 +1,127 @@
+---
+name: pipeline-checklist
+description: When a pipeline command terminates (successful Gate 2 approval, explicit `reject`, or HALT), the orchestrator MUST emit a **completion panel** to chat containing
+scope: workspace-universal (pipeline output)
+when-to-apply: Every terminating run of `/implement`, `/bugfix`, `/plan`, `/triage`
+globs: []
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-workflow/rules/human-approval-gates.md
+  - efp-ai-knowledge-base/ai-workflow/rules/agent-attribution.md
+---
+# Pipeline checklist
+
+## Rule
+When a pipeline command terminates (successful Gate 2 approval, explicit `reject`, or HALT), the orchestrator MUST emit a **completion panel** to chat containing:
+
+1. A **phase checklist** showing every phase the command was supposed to run, each with status: `DONE` / `SKIPPED` / `HALTED` / `N/A`.
+2. A **summary table** (repos, feature branch, base, commit SHA, files changed, review result, JIRA comment id, task-history path).
+3. **Next steps** (e.g., `git push` + open MR).
+
+The checklist replaces ad-hoc summaries. It is the developer's single proof that every required phase actually ran.
+
+## Required phases per command
+
+The checklist MUST list these phases in this order. Skipping any phase that is marked **required** is a pipeline bug.
+
+| Phase | `/implement` | `/bugfix` | `/plan` | `/triage` |
+|---|---|---|---|---|
+| `command-invoked` (developer typed it) | required | required | required | required |
+| `jira-agent` | required | required | required | required |
+| `ticket-completeness-agent` | required | required | required | required |
+| `router-agent` | required | required | required | required |
+| `rca-agent` | N/A | required | N/A | N/A |
+| `planner-agent` | required | required | required | N/A |
+| `Gate 1` | required | required | N/A | N/A |
+| `base-branch-picker-agent` | required | required | N/A | N/A |
+| `coder-agent` | required | required | N/A | N/A |
+| `review-agents (×14, parallel)` | required | required | N/A | N/A |
+| `review-aggregator → JIRA comment` | required | required | N/A | N/A |
+| `Gate 2` | required | required | N/A | N/A |
+| `task-history finalized` | required | required | required | required |
+
+For `/plan` and `/triage` (no code, no gates), the checklist still appears at termination — confirming the read-only run completed.
+
+## Checklist format
+
+Markdown table, one row per phase. Compact. No emoji.
+
+```
+| # | Phase                                  | Status |
+|---|----------------------------------------|--------|
+| 0 | /implement EFP-1423 (invoked)          | DONE   |
+| 1 | jira-agent                             | DONE   |
+| 2 | ticket-completeness-agent              | DONE   |
+| 3 | router-agent                           | DONE   |
+| 4 | planner-agent                          | DONE   |
+| 5 | Gate 1 (plan + base branches)          | DONE   |
+| 6 | base-branch-picker-agent               | DONE   |
+| 7 | coder-agent                            | DONE   |
+| 8 | review-agents (×14, parallel)          | DONE   |
+| 9 | review-aggregator → JIRA comment       | DONE (comment 113837) |
+|10 | Gate 2                                 | DONE   |
+|11 | task-history finalized                 | DONE (ai-brain/task-history/EFP-1423.md) |
+```
+
+Status vocabulary:
+- `DONE` — phase completed normally.
+- `DONE (…)` — completed with a notable artifact id (comment id, file path) in parens.
+- `SKIPPED` — phase was not required for this command (use for `rca-agent` row on `/implement` etc.).
+- `HALTED` — phase ran and stopped the pipeline.
+- `N/A` — phase does not exist for this command.
+
+Phase index `0` is always the command invocation itself (so the developer sees they triggered it).
+
+## Why
+Today the developer only sees disembodied PASS/FAIL banners during a run and a free-form summary at the end. Without a fixed checklist:
+- It is easy to silently skip a phase (we already had a bug where reviewers were skipped).
+- The developer has no clean record of what ran in what order.
+- Audit + post-mortem need to reconstruct phases from chat scrollback.
+
+A fixed table at termination makes the skipped phase obvious — `SKIPPED` shows up where `DONE` should — and gives the developer one thing to screenshot for ops/QA.
+
+## Constraints
+- The checklist is emitted **once, at termination** — not after each phase. Live progress is the responsibility of [`agent-attribution`](agent-attribution.md) banners.
+- Every `required` phase MUST appear with `DONE` (or `HALTED`). If the orchestrator cannot show `DONE` for a required phase, it must mark `HALTED` and not claim success.
+- `task-history finalized` is the last row and is **non-skippable** — see [`human-approval-gates`](human-approval-gates.md). The orchestrator MUST verify the file exists at `ai-brain/task-history/<KEY>.md` and that its frontmatter `last-phase` equals the terminating phase before rendering the checklist.
+- The completion panel is rendered AFTER the developer's Gate 2 `approve` reply — never before.
+- On `reject` or `HALTED`, the orchestrator still emits a checklist with the appropriate statuses + the reason in a `## Halt reason` block below.
+
+## Examples
+
+### Good (successful /implement)
+```
+| # | Phase                              | Status |
+|---|------------------------------------|--------|
+| 0 | /implement EFP-1423 (invoked)      | DONE   |
+| 1 | jira-agent                         | DONE   |
+| ... |
+|11 | task-history finalized             | DONE (ai-brain/task-history/EFP-1423.md) |
+```
+
+### Good (HALT at completeness)
+```
+| # | Phase                              | Status |
+|---|------------------------------------|--------|
+| 0 | /implement EFP-1423 (invoked)      | DONE   |
+| 1 | jira-agent                         | DONE   |
+| 2 | ticket-completeness-agent          | HALTED |
+| 3 | router-agent                       | N/A    |
+| ... |
+|11 | task-history finalized             | DONE (ai-brain/task-history/EFP-1423.md, phase=halted) |
+
+## Halt reason
+ticket-completeness-agent: missing AC + ticket unassigned. See "What you need to do" above.
+```
+
+### Bad
+```
+✅ Done! Pipeline complete.
+Files: Column.tsx, ...
+```
+(no checklist; impossible to tell which phases ran or were skipped)
+
+## Related
+- Rules: `human-approval-gates`, `agent-attribution`, `jira-write-permissions`.
+- Skills: `task-history-writer` (the `last-phase` it stamps is what the checklist row `11` cites).
+- Agents: every pipeline + review agent contributes one row.
+- Commands: `/implement`, `/bugfix`, `/plan`, `/triage`.
