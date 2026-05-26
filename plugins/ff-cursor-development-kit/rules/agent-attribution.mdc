@@ -1,0 +1,101 @@
+---
+name: agent-attribution
+description: Every agent prints a **one-line banner** to chat before any other output, so the developer can see the four-layer chain (Command → Agent → Skill → Rule) play out live
+scope: workspace-universal (pipeline output)
+when-to-apply: Every agent invocation that emits chat output during `/implement`, `/bugfix`, `/plan`, `/triage`, `/route`, `/db-impact`
+globs: []
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-workflow/dependency-map.md
+---
+# Agent attribution
+
+## Rule
+Every agent prints a **one-line banner** to chat before any other output, so the developer can see the four-layer chain (Command → Agent → Skill → Rule) play out live.
+
+### Banner format
+
+```
+▸ <agent-name> — <short present-tense action, ≤ 8 words>
+```
+
+- Leading character is `▸` (single unicode triangle, low-token, scannable).
+- Agent name matches the agent's file name without the `.md` (e.g., `ticket-completeness-agent`, `base-branch-picker-agent`).
+- Action is what the agent is *about to do* in this turn, not a generic role description.
+- One banner per phase. If an agent re-enters (e.g., after `revise`), it banners again with the new action.
+
+### Gate banners
+Approval gates also banner — they are pipeline checkpoints the developer interacts with:
+
+```
+▸ Gate 1 — waiting for your approval (plan + per-repo base branches)
+▸ Gate 2 — waiting for your approval (review the consolidated JIRA comment first)
+```
+
+### Parallel reviewers
+The 14 review agents run in parallel under one orchestrator banner — not 14 separate banners (would be noisy and costly). Use:
+
+```
+▸ review-agents (×14, parallel) — analysing the committed diff
+```
+
+When all 14 return, the orchestrator emits one more banner before posting to JIRA:
+
+```
+▸ review-aggregator — posting consolidated findings to JIRA-<KEY>
+```
+
+### Halts and failures
+When an agent halts the pipeline, the banner names the agent that halted:
+
+```
+▸ ticket-completeness-agent — HALT: missing acceptance criteria, ticket unassigned
+```
+
+## Why
+Without attribution, the developer sees disembodied PASS/FAIL/HALT output and has no idea which agent ran or which to debug. Naming the agent makes the four-layer chain visible, which is exactly what the workflow's design intent (`getting-started.md` §3.5) promises. The cost is tiny — about 5 tokens per banner — and the readability gain is substantial.
+
+## Constraints
+- **One banner per phase, not per sub-step.** Don't banner every file read or every tool call inside an agent's turn.
+- **No emoji.** Keep it terminal-clean and low-token.
+- **No status colours / markdown headers / horizontal rules.** Just the single triangle prefix line.
+- **Action line is not the agent's full role.** "checking AC, assignee, repro steps" — not "Enforces the ticket-completeness rule for every JIRA-touching command."
+- **Reviewers MUST use the single grouped banner.** Even if some finish earlier than others, the orchestrator suppresses per-reviewer banners.
+- **Do not banner for read-only sub-agents inside another agent's turn** (e.g., a skill called by an agent does not banner — only the agent does).
+
+## Examples
+
+### Good
+```
+▸ jira-agent — fetching EFP-1423 from JIRA
+... intake JSON ...
+▸ ticket-completeness-agent — checking AC, assignee, repro steps
+... PASS / FAIL table ...
+▸ router-agent — resolving building-block → owning services
+... routing JSON ...
+▸ planner-agent — drafting cross-repo plan
+... plan ...
+▸ Gate 1 — waiting for your approval (plan + per-repo base branches)
+```
+
+### Bad
+```
+✅ Jira fetched
+🔍 Now checking completeness...
+[ROUTER] Routing...
+**Planner Output:**
+...
+```
+(emoji noise, inconsistent prefixes, no consistent naming)
+
+```
+▸ jira-agent — starting
+▸ jira-agent — calling API
+▸ jira-agent — parsing response
+▸ jira-agent — writing intake
+```
+(banner per sub-step instead of one per phase)
+
+## Related
+- Skills: every skill that's invoked by an agent (skills do not banner on their own).
+- Agents: all 22 agents in `agents/`.
+- Rules: `human-approval-gates` (gate banners), `prompt-governance` (output discipline).

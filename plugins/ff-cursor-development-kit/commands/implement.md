@@ -26,9 +26,44 @@ jira-agent
   → base-branch-picker-agent (verify clean tree; fetch; `git checkout -b ai/<KEY>-<slug> origin/<base>` per repo)
   → coder-agent (on the feature branch: edit, test, `git add`, `git commit`)
   → (code-review + security + architecture + service-boundary + data-ownership + tenant-isolation + contract + test + observability + migration + performance + prompt-review + adr-compliance + async-transport agents in parallel)
-  → [HUMAN APPROVAL GATE 2]
+  → review-aggregator step (orchestrator collects all 14 findings, formats them as ONE comment, posts it to the JIRA ticket via `jira-write-permissions`)
+  → [HUMAN APPROVAL GATE 2 — only emitted after the consolidated JIRA comment lands]
   → stop (developer raises the MR)
 ```
+
+Every agent above MUST banner per [`agent-attribution`](../rules/agent-attribution.md) before its output. The 14 reviewers share one grouped banner (`▸ review-agents (×14, parallel) — analysing the committed diff`); per-reviewer banners are suppressed.
+
+## Review-aggregator step (between reviewers and Gate 2)
+
+The `/implement` orchestrator — not the individual reviewers — performs this step:
+
+1. Wait for all 14 review agents to return their findings (format: `<agent-name>: <findings>` or `<agent-name>: Clear`).
+2. Concatenate into a single JIRA comment body:
+   ```
+   AI Review — <JIRA-KEY> — <feature-branch-name>
+
+   code-review-agent: <findings or "Clear">
+   security-agent: <findings or "Clear">
+   architecture-agent: <findings or "Clear">
+   service-boundary-agent: <findings or "Clear">
+   data-ownership-agent: <findings or "Clear">
+   tenant-isolation-agent: <findings or "Clear">
+   contract-agent: <findings or "Clear">
+   test-agent: <findings or "Clear">
+   observability-agent: <findings or "Clear">
+   migration-agent: <findings or "Clear">
+   performance-agent: <findings or "Clear">
+   prompt-review-agent: <findings or "Clear">
+   adr-compliance-agent: <findings or "Clear">
+   async-transport-agent: <findings or "Clear">
+
+   — Posted by /implement before Gate 2.
+   ```
+3. POST the comment to the JIRA ticket (see [`jira-write-permissions`](../rules/jira-write-permissions.md) — comment-add is allowed; deletes are universally forbidden).
+4. Banner `▸ review-aggregator — posting consolidated findings to JIRA-<KEY>`, then once posted, banner `▸ Gate 2 — waiting for your approval (review the consolidated JIRA comment first)`.
+5. Emit the Gate 2 prompt verbatim per [`human-approval-gates`](../rules/human-approval-gates.md).
+
+If any reviewer returns a **Blocker**, the orchestrator still posts the consolidated comment (so the developer has a record), but halts before Gate 2 with `▸ review-aggregator — HALT before Gate 2: <N> Blocker finding(s) — see JIRA-<KEY>`. The developer fixes on the feature branch and re-runs.
 
 ## Required skills
 `jira-ticket-parser`, `building-block-router`, `plan-and-implement`, `go-gin-api-authoring` / `node-ts-express-authoring` / `python-fastapi-authoring` (as needed), `mongo-schema-change` / `mysql-schema-change` / `datastore-kind-change` (as needed), `event-contract-authoring`, `proxy-integration`, `base-branch-picker`, `task-history-writer`.
@@ -43,6 +78,9 @@ jira-agent
 - Affected repos must have a clean working tree at `base-branch-picker-agent` time; dirty tree halts the pipeline (the agent never stashes).
 - Both human approval gates are non-skippable (`human-approval-gates`); Gate 1 also carries the per-repo base-branch choices.
 - `base-branch-picker-agent` never pushes, never commits, never opens a merge request (`base-branch-selection`). Commits are made by `coder-agent` onto the feature branch the picker creates.
+- All 14 review agents MUST run after `coder-agent` and before Gate 2 — none may be skipped. The orchestrator MUST aggregate their findings into one JIRA comment and post it before emitting the Gate 2 prompt (`human-approval-gates`).
+- Review agents return findings to the orchestrator only; they do not call the JIRA API themselves (`jira-write-permissions`).
+- Every agent banners per `agent-attribution` so the developer can see which agent is acting at every step.
 - If any review agent returns a Blocker finding, the pipeline halts before Gate 2. The commit stays on the feature branch; the developer fixes in place and re-runs.
 
 ## Failure handling
@@ -53,4 +91,4 @@ If the developer re-invokes `/implement <KEY>`, the pipeline reads `last-phase` 
 
 ## Related
 - Commands: `/bugfix`, `/plan`, `/triage`.
-- Rules: `ticket-completeness`, `human-approval-gates`, `base-branch-selection`.
+- Rules: `ticket-completeness`, `human-approval-gates`, `base-branch-selection`, `jira-write-permissions`, `agent-attribution`.

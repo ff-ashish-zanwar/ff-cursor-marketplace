@@ -1,0 +1,62 @@
+---
+name: jira-write-permissions
+description: Agents may perform exactly these JIRA operations and no others
+scope: workspace-universal (JIRA pipeline)
+when-to-apply: Any agent, skill, or command that touches JIRA
+globs: []
+linked-knowledge-base-files:
+  - efp-ai-knowledge-base/ai-workflow/jira-integration/auth-and-secrets.md
+---
+# JIRA write permissions
+
+## Rule
+Agents may perform exactly these JIRA operations and no others:
+
+| Allowed | Forbidden |
+|---|---|
+| Read tickets, fields, comments, attachments | Create / delete / archive tickets, sub-tasks, epics |
+| Add a new comment on a ticket | Delete or hide any comment (own or others') |
+| Update a comment **the agent itself authored** | Update or edit a comment authored by a human |
+| Read project / board / sprint metadata | Create, modify, or delete projects, boards, sprints, workflows |
+| Read ticket transitions / status | Transition / change ticket status (the pipeline never moves a ticket) |
+| — | Delete or modify attachments, links, watchers, assignees, labels, fix-versions |
+
+**Delete is universally forbidden.** No agent under any command may delete any JIRA entity (ticket, sub-task, comment, attachment, link, label, board, project, sprint, version, anything), even if the developer explicitly requests it.
+
+## Refusal phrase
+If a developer asks for any delete operation in JIRA, the agent must respond verbatim:
+
+> It is not allowed for me to delete anything in JIRA. I can only read information and add/update comments.
+
+No paraphrasing, no "but I can do X instead" follow-up unless the developer asks a new question.
+
+## Why
+- Deletes are irreversible. A wrong-target delete on a JIRA ticket destroys audit trail the team relies on for compliance, billing, and incident review.
+- Comments are append-only by convention — humans on the team expect their comments to persist as written.
+- The pipeline already has the access it needs: read for intake, comment-write for review findings and failure notices. Anything beyond that is out of scope for AI agents.
+
+## Constraints
+- Credentials (`JIRA_API_TOKEN`) granted to agents must have a JIRA role that lacks delete and admin permissions at the API level — defense in depth. If the developer's token has broader permissions, agents still must not exercise them.
+- The orchestrator (`/implement`, `/bugfix`) is the single writer for review-finding comments — individual review agents return findings to the orchestrator and never call the JIRA API themselves.
+- A comment-update is only legal when the comment was authored by the same agent in the same pipeline run (e.g., correcting a typo before Gate 2 fires). Edits to historical comments are forbidden even if AI-authored.
+- Refusal applies even inside a `revise <notes>` reply — if the notes contain a delete request, the agent refuses that part and asks the developer to remove or rephrase.
+
+## Examples
+
+### Good
+> Developer: "drop the duplicate sub-task EFP-1423-a, it was created by mistake"
+> Agent: *It is not allowed for me to delete anything in JIRA. I can only read information and add/update comments.*
+
+> Review pipeline finishes. Orchestrator posts ONE consolidated comment listing all 14 reviewer findings (see [human-approval-gates](human-approval-gates.md)).
+
+### Bad
+> Agent silently transitions EFP-1423 from `To Do` to `In Progress` when `/implement` starts.
+
+> Review-agent posts 14 separate comments to the ticket instead of returning findings to the orchestrator.
+
+> Agent edits a comment a human PM wrote two weeks ago to "fix a typo."
+
+## Related
+- Agents: every agent. Specifically gating: `jira-agent`, `ticket-completeness-agent`, and the 14 review agents.
+- Commands: `/implement`, `/bugfix`, `/plan`, `/triage`, `/route`, `/db-impact`.
+- Rules: `human-approval-gates` (Gate 2 trigger depends on the orchestrator's consolidated comment landing), `secrets-management`.

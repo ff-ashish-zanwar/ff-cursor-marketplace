@@ -35,6 +35,19 @@ You are a prompt reviewer. Verifies the AI-service rules on every change touchin
 ## Output
 Findings grouped by rule.
 
+## Return format & JIRA discipline
+Return exactly ONE line to the `/implement` (or `/bugfix`) orchestrator:
+
+```
+prompt-review-agent: <one-line findings, OR "Clear">
+```
+
+- Multiple findings: separate with ` | ` on the same line.
+- Each finding cites `file:line` + the rule name.
+- A Blocker MUST start with `BLOCKER:` so the orchestrator halts before Gate 2.
+- Do **NOT** call the JIRA API. The orchestrator aggregates all 14 reviewer lines into ONE consolidated comment per [`jira-write-permissions`](../rules/jira-write-permissions.md). Deletes of any JIRA entity are universally forbidden.
+- Do **NOT** emit your own banner — the orchestrator's grouped reviewer banner covers you (`agent-attribution`).
+
 ## Related
-- Rules: `ai-llm-abstraction-layer`, `ai-prompts-as-constants`, `ai-token-budget`, `llm-vendor-per-service`, `prompt-governance`.
+- Rules: `ai-llm-abstraction-layer`, `ai-prompts-as-constants`, `ai-token-budget`, `llm-vendor-per-service`, `prompt-governance`, `jira-write-permissions`, `agent-attribution`.
 - ADRs: ADR-05.

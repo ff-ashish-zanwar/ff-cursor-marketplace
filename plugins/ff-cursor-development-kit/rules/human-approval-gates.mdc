@@ -14,7 +14,11 @@ linked-knowledge-base-files:
 The `/implement` and `/bugfix` pipelines have **two mandatory, non-skippable** human approval gates:
 
 - **Gate 1** — after the `planner-agent` produces its cross-repo plan, before any branches are created or code is written. Gate 1's reply also carries the per-repo base-branch choices (e.g., `approve; fb-rates-go=development, admin-backend=release/2026.04`), which feed directly into `base-branch-picker-agent`.
-- **Gate 2** — after all review agents pass, before the pipeline terminates. Approving Gate 2 ends the run; the commit already lives on the feature branch from the `code` phase, and the developer raises the MR.
+- **Gate 2** — after **all 14 review agents have returned AND the orchestrator has posted the consolidated findings comment to the JIRA ticket**, before the pipeline terminates. Gate 2 MUST NOT prompt the developer until that JIRA comment has landed (see [jira-write-permissions](jira-write-permissions.md) for who posts and what is allowed). Approving Gate 2 ends the run; the commit already lives on the feature branch from the `code` phase, and the developer raises the MR.
+
+Gate 2's prompt to the developer is fixed:
+
+> All 14 review agents have posted their findings as a consolidated comment on `<JIRA-KEY>`. Please review the JIRA comment first, then reply `approve` / `revise <notes>` / `reject`.
 
 Each gate accepts exactly one of three replies: `approve`, `reject`, or `revise <notes>`. Gate 1 additionally accepts per-repo base overrides in the same reply.
 
@@ -26,6 +30,8 @@ This is the 7-step meta-pattern used in every `freightify-web/.cursor/skills/**/
 - `revise <notes>` re-enters the current phase; it does not advance.
 - `reject` halts the pipeline and preserves partial artifacts in `task-history/<KEY>.md`.
 - Tools that run unattended (e.g., CI) must not impersonate a human at these gates; the developer's explicit reply is required.
+- **Gate 2 ordering is mandatory**: the orchestrator MUST (a) wait for all 14 review agents to return, (b) aggregate their findings into one comment, (c) post that comment to the JIRA ticket via the allowed JIRA write path, and (d) only then emit the Gate 2 banner and prompt. Skipping any step is a pipeline bug — Gate 2 has nothing meaningful to approve without the reviewers' verdicts on JIRA.
+- Each gate emits its banner per [agent-attribution](agent-attribution.md) (`▸ Gate 1 — ...` / `▸ Gate 2 — ...`).
 
 ## Examples
 
@@ -37,5 +43,6 @@ This is the 7-step meta-pattern used in every `freightify-web/.cursor/skills/**/
 
 ## Related
 - Skills: `plan-and-implement`, and every skill that composes it.
-- Agents: `planner-agent`, `coder-agent`, `base-branch-picker-agent`.
+- Agents: `planner-agent`, `coder-agent`, `base-branch-picker-agent`, all 14 review agents.
 - Commands: `/implement`, `/bugfix`.
+- Rules: `jira-write-permissions` (governs the Gate 2 consolidated comment), `agent-attribution` (gate banners).

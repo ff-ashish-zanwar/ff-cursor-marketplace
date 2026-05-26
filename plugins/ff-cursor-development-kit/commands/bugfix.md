@@ -18,9 +18,11 @@ Bug-specialized variant of `/implement`. Forces RCA (root-cause analysis) before
 ## Pipeline
 Identical to `/implement` with one insertion (rca-agent between router-agent and planner-agent):
 ```
-...router-agent → rca-agent → planner-agent → [GATE 1 — plan + base branches] → base-branch-picker-agent → coder-agent → reviews → [GATE 2] → stop
+...router-agent → rca-agent → planner-agent → [GATE 1 — plan + base branches] → base-branch-picker-agent → coder-agent → 14 review agents (parallel) → review-aggregator (posts consolidated comment to JIRA) → [GATE 2] → stop
 ```
 `rca-agent` uses the `bug-fix` skill. It produces a reproduction confirmation, evidence, and a root-cause note before anything is planned.
+
+The review-aggregator step and Gate 2 ordering are identical to `/implement` — see [`commands/implement.md`](implement.md) "Review-aggregator step" and rules [`human-approval-gates`](../rules/human-approval-gates.md), [`jira-write-permissions`](../rules/jira-write-permissions.md), [`agent-attribution`](../rules/agent-attribution.md).
 
 ## Required skills
 All `/implement` skills plus `bug-fix`.
