@@ -3,7 +3,7 @@ name: contract-agent
 description: You are a contract reviewer
 agent: contract-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent` when the diff touches an API / event contract / error envelope
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`) when the diff touches an API / event contract / error envelope
 inputs: [diff, contracts]
 tools-allowed: [read repo source, read diff, read contract files (OpenAPI, AJV, Pydantic, event payload structs)]
 outputs: Contract findings

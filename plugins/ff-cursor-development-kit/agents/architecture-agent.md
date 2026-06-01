@@ -3,7 +3,7 @@ name: architecture-agent
 description: You are an architecture reviewer
 agent: architecture-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent`
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`)
 inputs: [per-repo diff, service cards]
 tools-allowed: [read repo source, read diff]
 outputs: Architecture findings

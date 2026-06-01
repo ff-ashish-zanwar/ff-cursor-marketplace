@@ -3,7 +3,7 @@ name: observability-agent
 description: You are an observability reviewer
 agent: observability-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent`
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`)
 inputs: [diff]
 tools-allowed: [read repo source, read diff]
 outputs: Observability findings

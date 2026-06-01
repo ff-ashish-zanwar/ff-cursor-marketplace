@@ -3,7 +3,7 @@ name: migration-agent
 description: You are a migration reviewer
 agent: migration-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent` when the diff contains a schema / migration change
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`) when the diff contains a schema / migration change
 inputs: [diff, migration files]
 tools-allowed: [read repo source, read diff, dry-run migration if the repo supports it]
 outputs: Migration findings

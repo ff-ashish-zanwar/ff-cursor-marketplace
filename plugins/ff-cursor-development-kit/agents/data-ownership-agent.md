@@ -3,7 +3,7 @@ name: data-ownership-agent
 description: You are a data-ownership reviewer
 agent: data-ownership-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent`
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`)
 inputs: [diff, ownership-matrix.md]
 tools-allowed: [read repo source, read diff, read ownership-matrix]
 outputs: Data-ownership findings

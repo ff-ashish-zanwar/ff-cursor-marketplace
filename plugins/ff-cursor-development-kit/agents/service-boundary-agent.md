@@ -3,7 +3,7 @@ name: service-boundary-agent
 description: You are a service-boundary reviewer
 agent: service-boundary-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent`
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`)
 inputs: [diff, ownership-matrix]
 tools-allowed: [read repo source, read diff, read ownership-matrix.md]
 outputs: Service-boundary findings

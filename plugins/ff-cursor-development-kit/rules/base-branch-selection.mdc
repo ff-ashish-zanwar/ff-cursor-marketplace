@@ -15,9 +15,9 @@ Immediately after Gate 1 approves the plan — and **before** the coder-agent wr
 1. For each affected repo, asks the developer which base branch to build on. It offers the repo's convention (`development` or `main` — detected from the default branch) as the default. This prompt is typically folded into Gate 1's reply so it is one interaction, not two.
 2. Verifies the working tree is clean (`git status --porcelain` empty). A dirty tree halts the pipeline with the list of offending files — the agent never stashes, never commits on the current branch.
 3. Runs `git fetch origin`, then `git checkout -b ai/<JIRA-KEY>-<short-slug> origin/<chosen-base>`. The developer is now on the feature branch, with a working tree that matches `origin/<chosen-base>`.
-4. Hands off to the coder-agent, which commits onto this branch.
+4. Hands off to the coder-agent, which writes onto this branch but **leaves the changes uncommitted** (it never `git add`s or `git commit`s).
 
-The pipeline **stops after Gate 2 approves**. It never pushes, never opens a merge request.
+The pipeline **stops after Gate 2 approves** with the changes still uncommitted. It never stages, never commits, never pushes, never opens a merge request — the developer stages, commits, pushes, and raises the MR.
 
 ## Why
 Developer directive from 2026-04-20 (no MR automation) + 2026-04-21 refinement (Model C: pick base first, then code on it). Version control is GitLab, but integrating MR automation into the pipeline would couple the workflow to GitLab specifics and remove human judgment about MR timing, reviewers, and description quality.
@@ -28,21 +28,21 @@ The Model C ordering (pick base → branch → code → review) replaces the ear
 - Never push to remote; never call `gh` / `glab` / any MR API.
 - Never force-push; never amend an existing commit on a shared branch.
 - Never stash the developer's working tree. Dirty tree = halt with a clear message, not hidden state.
-- Never commit on the developer's starting branch. Feature-branch creation and commits both happen on `ai/<JIRA-KEY>-<short-slug>`.
+- Never commit on the developer's starting branch. No phase of the pipeline commits at all — the developer commits, after Gate 2, on `ai/<JIRA-KEY>-<short-slug>`.
 - Feature branches are created off `origin/<chosen-base>` (freshly fetched), not the developer's local `<chosen-base>`.
-- Commit message (written by the coder-agent, not the picker) includes the JIRA key, a one-line summary, and a reference to `task-history/<JIRA-KEY>.md`.
+- The pipeline writes no commit message — the developer authors the commit themselves after Gate 2 (the suggested convention is the JIRA key, a one-line summary, and a reference to `task-history/<JIRA-KEY>.md`).
 - If the chosen base branch is protected (e.g., `main`), fail loudly and ask the developer to pick a different base.
-- If the repo has an unpushed local commit matching `ai/<JIRA-KEY>`, resume from it rather than creating a duplicate.
+- If the feature branch `ai/<JIRA-KEY>-<short-slug>` already exists (e.g., from an earlier run), reuse it rather than creating a duplicate.
 
 ## Examples
 
 ### Good
-> At Gate 1, developer replies: `approve; fb-rates-go=development, admin-backend=release/2026.04`. `base-branch-picker-agent` verifies clean tree in both repos, runs `git fetch origin` + `git checkout -b ai/EFP-1234-frlc-category origin/development` in fb-rates-go and `... origin/release/2026.04` in admin-backend. Coder-agent commits onto each feature branch. Gate 2 approves. Pipeline stops. Developer raises the MR.
+> At Gate 1, developer replies: `approve; fb-rates-go=development, admin-backend=release/2026.04`. `base-branch-picker-agent` verifies clean tree in both repos, runs `git fetch origin` + `git checkout -b ai/EFP-1234-frlc-category origin/development` in fb-rates-go and `... origin/release/2026.04` in admin-backend. Coder-agent writes onto each feature branch and leaves the changes uncommitted. The developer reviews them at the Review-Readiness Gate, approves the reviews; Gate 2 approves. Pipeline stops with the changes uncommitted. Developer stages, commits, pushes, and raises the MR.
 
 ### Bad
 > `base-branch-picker-agent` detects a dirty working tree in fb-rates-go and runs `git stash` to "unblock" the pipeline. (Never stash — halt and let the developer decide.)
 
-> Coder-agent commits on `qa` first, then the picker tries to cherry-pick onto `origin/development`, hitting a conflict Gate 2 already approved through. (Model B / cherry-pick flow — explicitly rejected in favor of Model C.)
+> Coder-agent writes (or commits) on `qa` first, then the picker tries to cherry-pick onto `origin/development`, hitting a conflict Gate 2 already approved through. (Model B / cherry-pick flow — explicitly rejected in favor of Model C.)
 
 > Agent auto-pushes to remote and opens an MR without asking.
 

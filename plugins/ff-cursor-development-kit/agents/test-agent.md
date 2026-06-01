@@ -3,7 +3,7 @@ name: test-agent
 description: You are a test reviewer
 agent: test-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent`
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`)
 inputs: [diff, repo test command]
 tools-allowed: [read repo source, run repo test command locally]
 outputs: Test findings

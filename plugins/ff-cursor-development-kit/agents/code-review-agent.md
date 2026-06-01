@@ -3,7 +3,7 @@ name: code-review-agent
 description: You are a PR reviewer
 agent: code-review-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent` signals done
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent` signals done)
 inputs: [per-repo diff from coder-agent]
 tools-allowed: [read repo source, read diff, no writes]
 outputs: Scored review (/100) with Blocker/Major/Minor/Nit findings, each citing file:line + rule

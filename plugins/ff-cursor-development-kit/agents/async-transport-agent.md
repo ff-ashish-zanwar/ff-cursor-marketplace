@@ -3,7 +3,7 @@ name: async-transport-agent
 description: You are an async-transport reviewer
 agent: async-transport-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent` when the diff introduces or modifies an async flow
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`) when the diff introduces or modifies an async flow
 inputs: [diff, `building-block-to-services.json`]
 tools-allowed: [read repo source, read diff, read ai-brain/building-block-to-services.json]
 outputs: Transport-choice findings

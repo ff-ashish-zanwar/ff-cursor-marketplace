@@ -3,7 +3,7 @@ name: tenant-isolation-agent
 description: You are a tenant-isolation reviewer
 agent: tenant-isolation-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent` when the diff touches fb-rates-go, fb-iqs, admin-backend, or quote-ai-backend
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`) when the diff touches fb-rates-go, fb-iqs, admin-backend, or quote-ai-backend
 inputs: [diff, service cards]
 tools-allowed: [read repo source, read diff]
 outputs: Tenant-isolation findings

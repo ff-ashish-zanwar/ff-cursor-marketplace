@@ -11,7 +11,7 @@ sources:
 # base-branch-picker
 
 ## Purpose
-For each affected repo, ask the developer which base branch to build on, verify the working tree is clean, and create a fresh feature branch off that base. Leaves the developer on the feature branch so the coder-agent can commit directly onto it. Never pushes, never commits, never opens an MR.
+For each affected repo, ask the developer which base branch to build on, verify the working tree is clean, and create a fresh feature branch off that base. Leaves the developer on the feature branch so the coder-agent can write directly onto it (leaving the changes uncommitted). Never pushes, never commits, never opens an MR.
 
 ## Inputs
 - List of affected repos (from the planner-agent's `## Plan` output).
@@ -45,7 +45,7 @@ For each repo, in order:
 1. **Verify clean tree**: `git status --porcelain`. If the output is non-empty, halt with the list of dirty/untracked files and ask the developer to commit, stash, or discard them before re-running. Do NOT stash, do NOT commit, do NOT overwrite.
 2. **Fetch** the latest remote state: `git fetch origin`.
 3. **Create the feature branch off the chosen base**: `git checkout -b ai/<JIRA-KEY>-<short-slug> origin/<chosen-base>`. The working tree now matches `origin/<chosen-base>` and the developer is on the feature branch.
-4. **Stop** — do not commit. The coder-agent will add the code and commit on this branch.
+4. **Stop** — do not commit. The coder-agent will write the code onto this branch and leave it uncommitted; the developer commits after Gate 2.
 
 ### 6. Self-check
 - No `git push`, no `--force`, no `--amend`, no `git commit` anywhere in this skill.
@@ -54,7 +54,7 @@ For each repo, in order:
 - The feature branch must be based on `origin/<chosen-base>` (freshly fetched), not on whatever the developer's local `<chosen-base>` happens to point at.
 
 ### 7. Cleanup
-Leave the developer on the feature branch. Do not switch branches automatically. The pipeline now hands off to the coder-agent, which will commit onto this same branch.
+Leave the developer on the feature branch. Do not switch branches automatically. The pipeline now hands off to the coder-agent, which will write onto this same branch and leave the changes uncommitted.
 
 ## Quality gates
 - Any attempted `git push` / `git commit` / `git stash` within this skill is rejected; the skill stops with an error.
@@ -64,4 +64,4 @@ Leave the developer on the feature branch. Do not switch branches automatically.
 - Agents: `base-branch-picker-agent`.
 - Commands: `/implement`, `/bugfix`.
 - Rules: `base-branch-selection`.
-- Downstream: `coder-agent` commits onto the branch this skill creates.
+- Downstream: `coder-agent` writes onto the branch this skill creates and leaves the changes uncommitted.

@@ -3,7 +3,7 @@ name: prompt-review-agent
 description: You are a prompt reviewer
 agent: prompt-review-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent` when the diff touches AI services (rate-agent, qa-agent, quote-ai-backend) or any prompt file
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`) when the diff touches AI services (rate-agent, qa-agent, quote-ai-backend) or any prompt file
 inputs: [diff, prompt files]
 tools-allowed: [read repo source, read diff, read `prompts/` folders]
 outputs: Prompt findings

@@ -3,7 +3,7 @@ name: performance-agent
 description: You are a performance reviewer
 agent: performance-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent`
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`)
 inputs: [diff]
 tools-allowed: [read repo source, read diff]
 outputs: Performance findings

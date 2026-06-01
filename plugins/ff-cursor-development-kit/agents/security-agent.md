@@ -3,7 +3,7 @@ name: security-agent
 description: You are a security reviewer
 agent: security-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent`
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`)
 inputs: [per-repo diff, service cards]
 tools-allowed: [read repo source, read diff, static scan for secret patterns, dependency CVE lookup]
 outputs: Security findings per category

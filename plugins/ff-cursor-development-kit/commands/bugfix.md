@@ -5,7 +5,7 @@ command: /bugfix
 arguments: <JIRA-KEY>
 category: primary
 on-demand: true
-side-effects: same as /implement
+side-effects: same as /implement (leaves uncommitted changes; never stages, commits, or pushes)
 ---
 # /bugfix <JIRA-KEY>
 
@@ -18,7 +18,7 @@ Bug-specialized variant of `/implement`. Forces RCA (root-cause analysis) before
 ## Pipeline
 Identical to `/implement` with one insertion (rca-agent between router-agent and planner-agent):
 ```
-...router-agent → rca-agent → planner-agent → [GATE 1 — plan + base branches] → base-branch-picker-agent → coder-agent → 14 review agents (parallel) → review-aggregator (posts consolidated comment to JIRA) → [GATE 2] → stop
+...router-agent → rca-agent → planner-agent → [GATE 1 — plan + base branches] → base-branch-picker-agent → coder-agent (no commit) → [REVIEW-READINESS GATE] → 14 review agents (parallel, on the uncommitted diff) → review-aggregator (posts consolidated comment to JIRA) → [GATE 2] → stop (changes uncommitted; developer commits)
 ```
 `rca-agent` uses the `bug-fix` skill. It produces a reproduction confirmation, evidence, and a root-cause note before anything is planned.
 

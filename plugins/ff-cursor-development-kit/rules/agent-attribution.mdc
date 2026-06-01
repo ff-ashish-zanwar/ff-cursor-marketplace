@@ -22,9 +22,9 @@ Every agent prints a **two-line banner** to chat before any other output, so the
 - Line 1 is a markdown H3 heading (`###`) — renders large and bold in Cursor chat, scannable when scrolling.
 - Line 2 is the action in italics (`*...*`) — subtle, doesn't compete with the heading.
 - `▸` triangle stays as the visual anchor at the start of the heading.
-- `[<N>/<TOTAL>]` is the phase counter (e.g., `[1/11]`). `N` is this phase's index; `TOTAL` is the number of required banners for the current command — see [`pipeline-checklist`](pipeline-checklist.md) "Required phases per command":
-  - `/implement` → `TOTAL = 11` (jira-agent through task-history finalize)
-  - `/bugfix` → `TOTAL = 12` (adds `rca-agent`)
+- `[<N>/<TOTAL>]` is the phase counter (e.g., `[1/12]`). `N` is this phase's index; `TOTAL` is the number of required banners for the current command — see [`pipeline-checklist`](pipeline-checklist.md) "Required phases per command":
+  - `/implement` → `TOTAL = 12` (jira-agent through task-history finalize, including the Review-Readiness Gate)
+  - `/bugfix` → `TOTAL = 13` (adds `rca-agent`)
   - `/plan` → `TOTAL = 5`
   - `/triage` → `TOTAL = 4`
 - Agent name matches the agent's file name without the `.md` (e.g., `ticket-completeness-agent`, `base-branch-picker-agent`).
@@ -35,27 +35,32 @@ Every agent prints a **two-line banner** to chat before any other output, so the
 Approval gates also banner — they are pipeline checkpoints the developer interacts with:
 
 ```markdown
-### ▸ [5/11] Gate 1
+### ▸ [5/12] Gate 1
 *waiting for your approval (plan + per-repo base branches)*
 ```
 
 ```markdown
-### ▸ [10/11] Gate 2
+### ▸ [8/12] Review-Readiness Gate
+*coding done — review/edit the uncommitted changes, then approve to start reviews*
+```
+
+```markdown
+### ▸ [11/12] Gate 2
 *waiting for your approval (review the consolidated JIRA comment first)*
 ```
 
 ### Parallel reviewers
-The 14 review agents run in parallel under one orchestrator banner — not 14 separate banners (would be noisy and costly). Use:
+The 14 review agents run in parallel under one orchestrator banner — not 14 separate banners (would be noisy and costly). They run only after the Review-Readiness Gate is approved, against the uncommitted working-tree diff. Use:
 
 ```markdown
-### ▸ [8/11] review-agents (×14, parallel)
-*analysing the committed diff*
+### ▸ [9/12] review-agents (×14, parallel)
+*analysing the uncommitted working-tree diff*
 ```
 
 When all 14 return, the orchestrator emits one more banner before posting to JIRA:
 
 ```markdown
-### ▸ [9/11] review-aggregator
+### ▸ [10/12] review-aggregator
 *posting consolidated findings to JIRA-<KEY>*
 ```
 
@@ -63,7 +68,7 @@ When all 14 return, the orchestrator emits one more banner before posting to JIR
 After Gate 2 approval, the orchestrator banners the finalize step (writing + verifying the task-history file) before the completion panel:
 
 ```markdown
-### ▸ [11/11] task-history finalize
+### ▸ [12/12] task-history finalize
 *writing gate-2 section and verifying ai-brain/task-history/<KEY>.md*
 ```
 
@@ -71,7 +76,7 @@ After Gate 2 approval, the orchestrator banners the finalize step (writing + ver
 When an agent halts the pipeline, the banner names the agent that halted — keep the heading style but make the action line start with `HALT:` in italics:
 
 ```markdown
-### ▸ [2/11] ticket-completeness-agent
+### ▸ [2/12] ticket-completeness-agent
 *HALT: missing acceptance criteria, ticket unassigned*
 ```
 
@@ -91,27 +96,27 @@ Without attribution, the developer sees disembodied PASS/FAIL/HALT output and ha
 
 ### Good (excerpt from a healthy `/implement` run)
 ```markdown
-### ▸ [1/11] jira-agent
+### ▸ [1/12] jira-agent
 *fetching EFP-1423 from JIRA*
 
 ... intake JSON ...
 
-### ▸ [2/11] ticket-completeness-agent
+### ▸ [2/12] ticket-completeness-agent
 *checking AC, assignee, repro steps*
 
 ... PASS / FAIL table ...
 
-### ▸ [3/11] router-agent
+### ▸ [3/12] router-agent
 *resolving building-block → owning services*
 
 ... routing JSON ...
 
-### ▸ [4/11] planner-agent
+### ▸ [4/12] planner-agent
 *drafting cross-repo plan*
 
 ... plan ...
 
-### ▸ [5/11] Gate 1
+### ▸ [5/12] Gate 1
 *waiting for your approval (plan + per-repo base branches)*
 ```
 

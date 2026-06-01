@@ -3,7 +3,7 @@ name: adr-compliance-agent
 description: You are an ADR-compliance reviewer
 agent: adr-compliance-agent
 category: review (parallel)
-trigger: Runs in parallel after `coder-agent` on every `/implement` and `/bugfix`
+trigger: Runs in parallel after the Review-Readiness Gate is approved (i.e. after `coder-agent`) on every `/implement` and `/bugfix`
 inputs: [plan from planner-agent, diff from coder-agent]
 tools-allowed: [read ai-brain/decision-log/**, read rules/skills/commands/agents that carry `awaits-adr`]
 outputs: ADR-compliance findings

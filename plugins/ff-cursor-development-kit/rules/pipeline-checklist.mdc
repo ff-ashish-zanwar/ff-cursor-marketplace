@@ -14,8 +14,8 @@ linked-knowledge-base-files:
 When a pipeline command terminates (successful Gate 2 approval, explicit `reject`, or HALT), the orchestrator MUST emit a **completion panel** to chat containing:
 
 1. A **phase checklist** showing every phase the command was supposed to run, each with status: `DONE` / `SKIPPED` / `HALTED` / `N/A`.
-2. A **summary table** (repos, feature branch, base, commit SHA, files changed, review result, JIRA comment id, task-history path).
-3. **Next steps** (e.g., `git push` + open MR).
+2. A **summary table** (repos, feature branch, base, working-tree status [`uncommitted`], files changed, review result, JIRA comment id, task-history path). There is no commit SHA — the pipeline never commits.
+3. **Next steps** (the developer stages, commits, and pushes: `git add` → `git commit` → `git push` + open MR).
 
 The checklist replaces ad-hoc summaries. It is the developer's single proof that every required phase actually ran.
 
@@ -34,6 +34,7 @@ The checklist MUST list these phases in this order. Skipping any phase that is m
 | `Gate 1` | required | required | N/A | N/A |
 | `base-branch-picker-agent` | required | required | N/A | N/A |
 | `coder-agent` | required | required | N/A | N/A |
+| `Review-Readiness Gate` | required | required | N/A | N/A |
 | `review-agents (×14, parallel)` | required | required | N/A | N/A |
 | `review-aggregator → JIRA comment` | required | required | N/A | N/A |
 | `Gate 2` | required | required | N/A | N/A |
@@ -56,10 +57,11 @@ Markdown table, one row per phase. Compact. No emoji.
 | 5 | Gate 1 (plan + base branches)          | DONE   |
 | 6 | base-branch-picker-agent               | DONE   |
 | 7 | coder-agent                            | DONE   |
-| 8 | review-agents (×14, parallel)          | DONE   |
-| 9 | review-aggregator → JIRA comment       | DONE (comment 113837) |
-|10 | Gate 2                                 | DONE   |
-|11 | task-history finalized                 | DONE (ai-brain/task-history/EFP-1423.md) |
+| 8 | Review-Readiness Gate                  | DONE   |
+| 9 | review-agents (×14, parallel)          | DONE   |
+|10 | review-aggregator → JIRA comment       | DONE (comment 113837) |
+|11 | Gate 2                                 | DONE   |
+|12 | task-history finalized                 | DONE (ai-brain/task-history/EFP-1423.md) |
 ```
 
 Status vocabulary:
@@ -95,7 +97,7 @@ A fixed table at termination makes the skipped phase obvious — `SKIPPED` shows
 | 0 | /implement EFP-1423 (invoked)      | DONE   |
 | 1 | jira-agent                         | DONE   |
 | ... |
-|11 | task-history finalized             | DONE (ai-brain/task-history/EFP-1423.md) |
+|12 | task-history finalized             | DONE (ai-brain/task-history/EFP-1423.md) |
 ```
 
 ### Good (HALT at completeness)
@@ -107,7 +109,7 @@ A fixed table at termination makes the skipped phase obvious — `SKIPPED` shows
 | 2 | ticket-completeness-agent          | HALTED |
 | 3 | router-agent                       | N/A    |
 | ... |
-|11 | task-history finalized             | DONE (ai-brain/task-history/EFP-1423.md, phase=halted) |
+|12 | task-history finalized             | DONE (ai-brain/task-history/EFP-1423.md, phase=halted) |
 
 ## Halt reason
 ticket-completeness-agent: missing AC + ticket unassigned. See "What you need to do" above.
