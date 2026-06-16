@@ -39,6 +39,7 @@ The checklist MUST list these phases in this order. Skipping any phase that is m
 | `review-aggregator → JIRA comment` | required | required | N/A | N/A |
 | `Gate 2` | required | required | N/A | N/A |
 | `task-history finalized` | required | required | required | required |
+| `publish-history` (Step 13) | required (prompt only — `no`/`later` are valid replies) | required (prompt only — `no`/`later` are valid replies) | N/A | N/A |
 
 For `/plan` and `/triage` (no code, no gates), the checklist still appears at termination — confirming the read-only run completed.
 
@@ -62,7 +63,14 @@ Markdown table, one row per phase. Compact. No emoji.
 |10 | review-aggregator → JIRA comment       | DONE (comment 113837) |
 |11 | Gate 2                                 | DONE   |
 |12 | task-history finalized                 | DONE (ai-brain/task-history/EFP-1423.md) |
+|13 | publish-history                        | DONE (commit a3f9c12 on efp-ai-knowledge-base/development; jira attach 4421) |
 ```
+
+Step 13 status vocabulary:
+- `DONE (commit <sha>[; jira attach <id>])` — developer answered `yes`.
+- `SKIPPED (no)` — developer declined; task-history stays local.
+- `DEFERRED (later)` — frontmatter `last-phase` is `publish-pending`; finish with `/publish-history <KEY>`.
+- `HALTED (<reason>)` — write to `efp-ai-knowledge-base/development` or JIRA failed.
 
 Status vocabulary:
 - `DONE` — phase completed normally.
@@ -82,9 +90,9 @@ Today the developer only sees disembodied PASS/FAIL banners during a run and a f
 A fixed table at termination makes the skipped phase obvious — `SKIPPED` shows up where `DONE` should — and gives the developer one thing to screenshot for ops/QA.
 
 ## Constraints
-- The checklist is emitted **once, at termination** — not after each phase. Live progress is the responsibility of [`agent-attribution`](agent-attribution.md) banners.
+- The checklist is emitted **once, at termination** — not after each phase. Live progress is the responsibility of [`agent-attribution`](agent-attribution.md) banners and the [`human-approval-gates`](human-approval-gates.md) position banner that fires after every revise.
 - Every `required` phase MUST appear with `DONE` (or `HALTED`). If the orchestrator cannot show `DONE` for a required phase, it must mark `HALTED` and not claim success.
-- `task-history finalized` is the last row and is **non-skippable** — see [`human-approval-gates`](human-approval-gates.md). The orchestrator MUST verify the file exists at `ai-brain/task-history/<KEY>.md` and that its frontmatter `last-phase` equals the terminating phase before rendering the checklist.
+- `task-history finalized` (row 12) and `publish-history` (row 13) are the last two rows. Row 12 is non-skippable — see [`human-approval-gates`](human-approval-gates.md); the orchestrator MUST verify the file exists at `ai-brain/task-history/<KEY>.md` and that its frontmatter `last-phase` is set before rendering the checklist. Row 13 is a prompt — `SKIPPED (no)` and `DEFERRED (later)` are valid outcomes, not failures.
 - The completion panel is rendered AFTER the developer's Gate 2 `approve` reply — never before.
 - On `reject` or `HALTED`, the orchestrator still emits a checklist with the appropriate statuses + the reason in a `## Halt reason` block below.
 

@@ -17,9 +17,10 @@ Agents may perform exactly these JIRA operations and no others:
 | Read tickets, fields, comments, attachments | Create / delete / archive tickets, sub-tasks, epics |
 | Add a new comment on a ticket | Delete or hide any comment (own or others') |
 | Update a comment **the agent itself authored** | Update or edit a comment authored by a human |
+| **Upload a new attachment to a ticket** (Step 13 only, when developer answers `attach-to-jira = yes`) | Delete or replace any attachment (own or others') |
 | Read project / board / sprint metadata | Create, modify, or delete projects, boards, sprints, workflows |
 | Read ticket transitions / status | Transition / change ticket status (the pipeline never moves a ticket) |
-| — | Delete or modify attachments, links, watchers, assignees, labels, fix-versions |
+| — | Modify links, watchers, assignees, labels, fix-versions |
 
 **Delete is universally forbidden.** No agent under any command may delete any JIRA entity (ticket, sub-task, comment, attachment, link, label, board, project, sprint, version, anything), even if the developer explicitly requests it.
 
@@ -39,6 +40,8 @@ No paraphrasing, no "but I can do X instead" follow-up unless the developer asks
 - Credentials (`JIRA_API_TOKEN`) granted to agents must have a JIRA role that lacks delete and admin permissions at the API level — defense in depth. If the developer's token has broader permissions, agents still must not exercise them.
 - The orchestrator (`/implement`, `/bugfix`) is the single writer for review-finding comments — individual review agents return findings to the orchestrator and never call the JIRA API themselves.
 - A comment-update is only legal when the comment was authored by the same agent in the same pipeline run (e.g., correcting a typo before Gate 2 fires). Edits to historical comments are forbidden even if AI-authored.
+- **There are exactly three JIRA write surfaces**: (a) the optional failure comment from `jira-agent` (suppressible with `--no-jira-comment`); (b) the consolidated review comment from `review-aggregator` posted before Gate 2; (c) the Step 13 task-history attachment + summary comment, only when the developer answers `attach-to-jira = yes`. No other agent under any command may call the JIRA write API.
+- Attachment uploads (Step 13) are limited to the task-history file for the current `<KEY>` — never any other file, never any other ticket. The accompanying summary comment is a single comment with a link to the attachment; it is not a re-dump of the file body.
 - Refusal applies even inside a `revise <notes>` reply — if the notes contain a delete request, the agent refuses that part and asks the developer to remove or rephrase.
 
 ## Examples

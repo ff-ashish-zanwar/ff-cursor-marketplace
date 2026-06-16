@@ -15,7 +15,9 @@ The `/implement` and `/bugfix` pipelines have **three mandatory, non-skippable**
 
 - **Gate 1** — after the `planner-agent` produces its cross-repo plan, before any branches are created or code is written. Gate 1's reply also carries the per-repo base-branch choices (e.g., `approve; fb-rates-go=development, admin-backend=release/2026.04`), which feed directly into `base-branch-picker-agent`.
 - **Review-Readiness Gate** — after `coder-agent` finishes writing the changes and **before** any review agent runs. The changes sit on the feature branch's working tree, **uncommitted and unstaged**. This gate hands control to the developer so they can read the diff, make their own edits, and only then green-light the reviews. The reviews run against whatever is in the working tree at the moment this gate is approved. `revise <notes>` re-runs `coder-agent` with the notes; `approve` starts the 14 review agents; `reject` halts.
-- **Gate 2** — after **all 14 review agents have returned AND the orchestrator has posted the consolidated findings comment to the JIRA ticket**, before the pipeline terminates. Gate 2 MUST NOT prompt the developer until that JIRA comment has landed (see [jira-write-permissions](jira-write-permissions.md) for who posts and what is allowed). Approving Gate 2 ends the AI's work; the changes are still **uncommitted** on the feature branch, and the developer stages, commits, and pushes at their own convenience, then raises the MR.
+- **Gate 2** — after **all 14 review agents have returned AND the orchestrator has posted the consolidated findings comment to the JIRA ticket**, before the pipeline terminates. Gate 2 MUST NOT prompt the developer until that JIRA comment has landed (see [jira-write-permissions](jira-write-permissions.md) for who posts and what is allowed). Approving Gate 2 hands off to Step 13 (publish-history) and ends the AI's coding work; the code changes are still **uncommitted** on the feature branch, and the developer stages, commits, and pushes at their own convenience, then raises the MR.
+
+**Step 13 (publish-history) is a prompt, not a gate.** After Gate 2 approve, the orchestrator asks two questions in one prompt: (a) publish task-history to `efp-ai-knowledge-base/development`? `yes` / `no` / `later`; (b) attach to JIRA? `yes` / `no`. `no` and `later` are valid answers — the run still completes. Only `publish = yes` writes to `efp-ai-knowledge-base`; only `attach-to-jira = yes` writes to JIRA (see `jira-write-permissions`).
 
 The Review-Readiness Gate's prompt to the developer is fixed:
 
@@ -32,7 +34,9 @@ This is the 7-step meta-pattern used in every `freightify-web/.cursor/skills/**/
 
 ## Constraints
 - No "silent" gates; each gate emits a Checkpoint summarizing what was produced and what is about to happen.
-- `revise <notes>` re-enters the current phase; it does not advance.
+- **Position banner is mandatory after every hand-off and every revise reply.** Format: `EFP-<KEY> — Step <N> of 13: <phase> (revision <revise-count>)` / `Next step on approve: Step <N+1> — <next phase>` / `Reply: approve | revise <notes> | reject`. (`/bugfix` shows `of 14`.) The banner reads `current-step` and `revise-count` from task-history frontmatter — never from chat — so the displayed step is always the next agent that will run.
+- `revise <notes>` re-enters the current phase; it does not advance. It increments frontmatter `revise-count`; the count resets to 0 the moment `current-step` advances.
+- **Soft cap at 5 revises on the same step.** When `revise-count` reaches 5, the orchestrator appends one extra line to the position banner — `Heads-up: 5 revisions on this step — want to step back to <previous-step> instead?` — as a soft prompt. It does NOT block; the developer remains the authority on when to stop.
 - `reject` halts the pipeline and preserves partial artifacts in `task-history/<KEY>.md`.
 - Tools that run unattended (e.g., CI) must not impersonate a human at these gates; the developer's explicit reply is required.
 - **Review-Readiness Gate ordering is mandatory**: no review agent may run until the developer has approved this gate. `coder-agent` finishes, leaves the changes uncommitted, and the orchestrator emits the Review-Readiness Gate prompt and waits. Fanning out to the review agents before this approval is a pipeline bug — the developer must be able to edit the code first.
@@ -40,11 +44,13 @@ This is the 7-step meta-pattern used in every `freightify-web/.cursor/skills/**/
 - **The pipeline never stages, commits, or pushes.** No agent runs `git add`, `git commit`, or `git push` at any point. After Gate 2 approval the changes are still uncommitted; the developer owns staging/committing/pushing.
 - **Post-Gate-2 finalize is mandatory and non-skippable.** When the developer replies `approve` at Gate 2, the orchestrator MUST, in this order, before terminating:
   1. Call [`task-history-writer`](../skills/task-history-writer.md) with phase `gate-2` to append the final approval section to `ai-brain/task-history/<KEY>.md`.
-  2. Verify the file exists at that exact path and that its frontmatter `last-phase: gate-2` is set. If the file is missing or the phase did not stamp, the orchestrator MUST NOT claim success — emit a halt banner per [`agent-attribution`](agent-attribution.md) (`### ▸ [12/12] task-history finalize` / `*HALT after Gate 2: finalize failed at ai-brain/task-history/<KEY>.md*`) and stop.
-  3. Render the **completion panel** per [`pipeline-checklist`](pipeline-checklist.md) — the checklist table, the summary table (repo / branch / base / working-tree status `uncommitted` / files / review result / JIRA comment id / task-history path), and next steps (the developer stages, commits, and pushes: `git add <files>` → `git commit` → `git push origin <feature-branch>`, then opens the MR).
-  4. Only then end the run.
+  2. Verify the file exists at that exact path and that its frontmatter `last-phase: gate-2` is set. If the file is missing or the phase did not stamp, the orchestrator MUST NOT claim success — emit a halt banner per [`agent-attribution`](agent-attribution.md) (`### ▸ [12/13] task-history finalize` / `*HALT after Gate 2: finalize failed at ai-brain/task-history/<KEY>.md*`) and stop.
+  3. Emit the **Step 13 (publish-history) prompt** — publish to `efp-ai-knowledge-base/development`? `yes` / `no` / `later`; attach to JIRA? `yes` / `no`. Handle the reply and re-stamp `last-phase` to `publish-history` (yes/no) or `publish-pending` (later).
+  4. Render the **completion panel** per [`pipeline-checklist`](pipeline-checklist.md) — the checklist table (including the Step 13 row), the summary table (repo / branch / base / working-tree status `uncommitted` / files / review result / JIRA comment id / task-history path / publish outcome), and next steps (the developer stages, commits, and pushes the **code**: `git add <files>` → `git commit` → `git push origin <feature-branch>`, then opens the MR).
+  5. Only then end the run.
 - On Gate 2 `reject` or `revise`, the orchestrator still calls `task-history-writer` (with phase `halted` for reject, or repeating the current phase for revise) so the task-history file always reflects reality.
-- Each gate emits its banner per [agent-attribution](agent-attribution.md) (`▸ Gate 1 — ...` / `▸ Review-Readiness Gate — ...` / `▸ Gate 2 — ...`).
+- Each gate emits its banner per [agent-attribution](agent-attribution.md) (`▸ Gate 1 — ...` / `▸ Review-Readiness Gate — ...` / `▸ Gate 2 — ...` / `▸ publish-history — ...`).
+- **One task-history file per JIRA key, forever.** The pipeline NEVER creates a second file for the same ticket. Re-opening a completed ticket appends a new `## Run N` section to the same file (frontmatter `run-count` increments and `current-step` resets). `--restart` does the same explicitly. Renaming or archiving the file is an explicit developer action — never the pipeline's.
 
 ## Examples
 
