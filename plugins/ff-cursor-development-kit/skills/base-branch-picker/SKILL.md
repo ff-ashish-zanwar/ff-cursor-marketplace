@@ -19,7 +19,7 @@ For each affected repo, ask the developer which base branch to build on, verify 
 
 ## Outputs
 - Per repo: `{ repo, base_branch, feature_branch }`.
-- Entry appended to `ai-brain/task-history/<KEY>.md` under `## Base Branches Chosen`.
+- Entry appended to `freightify-ai-brain/ai-brain/task-history/<KEY>.md` under `## Base Branches Chosen`.
 - Developer's checkout in each affected repo is on `ai/<JIRA-KEY>-<short-slug>`, based on `origin/<chosen-base>`, with a clean working tree.
 
 ## 7 steps

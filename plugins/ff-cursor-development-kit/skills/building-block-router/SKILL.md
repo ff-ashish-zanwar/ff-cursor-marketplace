@@ -48,7 +48,7 @@ Emit the routing decision with citations (which alias matched, which module entr
 ### 4. Pause for human approval
 
 ### 5. Implement
-Write the routing to `ai-brain/task-history/<KEY>.md` under `## Routing`.
+Write the routing to `freightify-ai-brain/ai-brain/task-history/<KEY>.md` under `## Routing`.
 
 ### 6. Self-check
 - No building-block assigned without a keyword match or an explicit ticket label.

@@ -69,7 +69,7 @@ After Gate 2 approval, the orchestrator banners the finalize step (writing + ver
 
 ```markdown
 ### ▸ [12/12] task-history finalize
-*writing gate-2 section and verifying ai-brain/task-history/<KEY>.md*
+*writing gate-2 section and verifying freightify-ai-brain/ai-brain/task-history/<KEY>.md*
 ```
 
 ### Halts and failures

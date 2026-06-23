@@ -5,7 +5,7 @@ command: /implement
 arguments: <JIRA-KEY>
 category: primary
 on-demand: true
-side-effects: writes task-history/<KEY>.md; creates feature branches on affected repos; leaves uncommitted changes on those branches (never stages, never commits, never pushes); optionally pushes the task-history file to `efp-ai-knowledge-base/development` and attaches it to the JIRA ticket at Step 13 (opt-in per run)
+side-effects: writes task-history/<KEY>.md; creates feature branches on affected repos; leaves uncommitted changes on those branches (never stages, never commits, never pushes); optionally pushes the task-history file to `freightify-ai-brain/task-history` and attaches it to the JIRA ticket at Step 13 (opt-in per run)
 ---
 # /implement <JIRA-KEY>
 
@@ -15,7 +15,7 @@ Primary entry point. Runs the full pipeline up to **uncommitted** changes on dev
 ## Inputs
 - JIRA ticket key. Any workflow status is accepted (`To Do`, `In Progress`, `In Review`, `Done`, etc.) — the ticket's status is captured into the task-history intake but does not gate the pipeline.
 - Developer-local `JIRA_API_TOKEN`, `JIRA_EMAIL`, `JIRA_BASE_URL`.
-- **`efp-ai-knowledge-base` cloned in the developer's workspace** alongside the service repos. `jira-agent` halts at start if the folder is missing — there is no fallback location for the task-history file.
+- **`freightify-ai-brain` cloned in the developer's workspace** alongside the service repos. `jira-agent` halts at start if the folder is missing — there is no fallback location for the task-history file.
 
 ## Pipeline
 ```
@@ -34,7 +34,7 @@ jira-agent
   → stop (code changes stay uncommitted; developer stages, commits, pushes, then raises the MR)
 ```
 
-Every agent above MUST banner per [`agent-attribution`](../rules/agent-attribution.md) before its output — H3 heading `### ▸ [<N>/13] <agent-name>` on line 1, italic action on line 2. The Review-Readiness Gate is `### ▸ [8/13] Review-Readiness Gate`. The 14 reviewers share one grouped banner (`### ▸ [9/13] review-agents (×14, parallel)` / `*analysing the uncommitted working-tree diff*`); per-reviewer banners are suppressed. The Step 13 prompt banners `### ▸ [13/13] publish-history` / `*pushing task-history to efp-ai-knowledge-base/development and (optionally) attaching to JIRA*` when the developer answers `yes`; on `no` the banner reads `*skipped — task-history stays local*`; on `later` it reads `*deferred — run /publish-history <KEY> to finish*`.
+Every agent above MUST banner per [`agent-attribution`](../rules/agent-attribution.md) before its output — H3 heading `### ▸ [<N>/13] <agent-name>` on line 1, italic action on line 2. The Review-Readiness Gate is `### ▸ [8/13] Review-Readiness Gate`. The 14 reviewers share one grouped banner (`### ▸ [9/13] review-agents (×14, parallel)` / `*analysing the uncommitted working-tree diff*`); per-reviewer banners are suppressed. The Step 13 prompt banners `### ▸ [13/13] publish-history` / `*pushing task-history to freightify-ai-brain/task-history and (optionally) attaching to JIRA*` when the developer answers `yes`; on `no` the banner reads `*skipped — task-history stays local*`; on `later` it reads `*deferred — run /publish-history <KEY> to finish*`.
 
 ## Position banner (after every hand-off and every revise)
 
@@ -95,28 +95,28 @@ If any reviewer returns a **Blocker**, the orchestrator still posts the consolid
 
 After the developer approves Gate 2, the orchestrator emits **one** prompt with two questions:
 
-> Task history for `<JIRA-KEY>` is ready at `efp-ai-knowledge-base/ai-brain/task-history/<KEY>.md`.
-> Publish it to `efp-ai-knowledge-base` on `development`? [`yes` / `no` / `later`]
+> Task history for `<JIRA-KEY>` is ready at `freightify-ai-brain/ai-brain/task-history/<KEY>.md`.
+> Publish it to `freightify-ai-brain` on `task-history`? [`yes` / `no` / `later`]
 > Also attach the file to the JIRA ticket? [`yes` / `no`]
 
 Behaviour by reply:
 
-- `publish = yes` → ensure `efp-ai-knowledge-base` working tree is clean; `git checkout development`; `git pull --ff-only`; `git add ai-brain/task-history/<KEY>.md`; `git commit -m "task-history: <KEY> — <ticket title>"`; `git push origin development`. Record the resulting commit SHA in frontmatter `published.knowledge-base-commit`.
-- `publish = no` → the file stays in the developer's local copy of `efp-ai-knowledge-base`. Frontmatter `last-phase` becomes `publish-history`.
+- `publish = yes` → ensure `freightify-ai-brain` working tree is clean; `git checkout task-history`; `git pull --ff-only`; `git add freightify-ai-brain/ai-brain/task-history/<KEY>.md`; `git commit -m "task-history: <KEY> — <ticket title>"`; `git push origin task-history`. Record the resulting commit SHA in frontmatter `published.freightify-ai-brain-commit`.
+- `publish = no` → the file stays in the developer's local copy of `freightify-ai-brain`. Frontmatter `last-phase` becomes `publish-history`.
 - `publish = later` → frontmatter `last-phase` becomes `publish-pending`. `/publish-history <KEY>` finishes the job at any time.
 - `attach-to-jira = yes` → upload the task-history file to the JIRA ticket as an attachment; post a short comment linking to it (allowed by `jira-write-permissions`). Record `published.jira-attachment-id`.
 - `attach-to-jira = no` → no JIRA write.
 
-Step 13 is a prompt, not a gate — `no` and `later` are valid answers that still complete the run. The pipeline never falls back to a temp folder; if `efp-ai-knowledge-base` cannot be written on `yes`, Step 13 halts with the path it tried.
+Step 13 is a prompt, not a gate — `no` and `later` are valid answers that still complete the run. The pipeline never falls back to a temp folder; if `freightify-ai-brain` cannot be written on `yes`, Step 13 halts with the path it tried.
 
 ## Required skills
 `jira-ticket-parser`, `building-block-router`, `plan-and-implement`, `go-gin-api-authoring` / `node-ts-express-authoring` / `python-fastapi-authoring` (as needed), `mongo-schema-change` / `mysql-schema-change` / `datastore-kind-change` (as needed), `event-contract-authoring`, `proxy-integration`, `base-branch-picker`, `task-history-writer`.
 
 ## Outputs
-- Updated `ai-brain/task-history/<JIRA-KEY>.md`. One file per JIRA key, forever — re-opens append a `## Run N` section, never a second file.
+- Updated `freightify-ai-brain/ai-brain/task-history/<JIRA-KEY>.md`. One file per JIRA key, forever — re-opens append a `## Run N` section, never a second file.
 - Per-repo feature branches created off developer-chosen base branches, carrying **uncommitted, unstaged** changes on the working tree. No commits are made by the pipeline.
 - Optional JIRA comment on failure (suppressible with `--no-jira-comment`).
-- Step 13 outputs (only when developer answers `yes`): one commit on `efp-ai-knowledge-base/development` containing the task-history file; optional JIRA attachment + summary comment.
+- Step 13 outputs (only when developer answers `yes`): one commit on `freightify-ai-brain/task-history` containing the task-history file; optional JIRA attachment + summary comment.
 
 ## Quality gates
 - Ticket must satisfy `ticket-completeness`.
@@ -127,17 +127,17 @@ Step 13 is a prompt, not a gate — `no` and `later` are valid answers that stil
 - Review agents return findings to the orchestrator only; they do not call the JIRA API themselves (`jira-write-permissions`).
 - Every agent banners per `agent-attribution` so the developer can see which agent is acting at every step.
 - If any review agent returns a Blocker finding, the pipeline halts before Gate 2. The uncommitted changes stay on the feature branch's working tree; the developer fixes in place and re-runs.
-- **Post-Gate-2 finalize**: when the developer approves Gate 2, the orchestrator MUST (1) call `task-history-writer` with phase `gate-2` to append the final section to `ai-brain/task-history/<KEY>.md`, (2) verify the file exists with `last-phase: gate-2` stamped, (3) emit the Step 13 prompt (publish-history), (4) handle the developer's reply per the Step 13 section above and re-stamp `last-phase` to `publish-history` / `publish-pending`, (5) emit the completion panel per `pipeline-checklist`. The run does not end until all five are done. The code changes remain uncommitted — the panel tells the developer to stage, commit, and push. See `human-approval-gates` constraints.
+- **Post-Gate-2 finalize**: when the developer approves Gate 2, the orchestrator MUST (1) call `task-history-writer` with phase `gate-2` to append the final section to `freightify-ai-brain/ai-brain/task-history/<KEY>.md`, (2) verify the file exists with `last-phase: gate-2` stamped, (3) emit the Step 13 prompt (publish-history), (4) handle the developer's reply per the Step 13 section above and re-stamp `last-phase` to `publish-history` / `publish-pending`, (5) emit the completion panel per `pipeline-checklist`. The run does not end until all five are done. The code changes remain uncommitted — the panel tells the developer to stage, commit, and push. See `human-approval-gates` constraints.
 
 ## Completion panel (after Gate 2 approve)
 
 The orchestrator emits a single panel to chat in this exact structure:
 
 1. **Phase checklist** — markdown table per `pipeline-checklist`, one row per phase, status `DONE` / `SKIPPED` / `HALTED` / `N/A`. Row `0` is `/implement <KEY> (invoked)`. Row `12` is `task-history finalized` with the file path in parens. Row `13` is `publish-history` with status `DONE (commit <sha>)` / `SKIPPED (no)` / `DEFERRED (later)` / `HALTED (<reason>)`.
-2. **Summary table** — rows: `Repo`, `Feature branch`, `Base`, `Working tree` (always `uncommitted`), `File(s) changed`, `Review result`, `JIRA comment`, `Task history`, `Publish` (Step 13 outcome). The `Task history` row MUST contain the verified file path (`efp-ai-knowledge-base/ai-brain/task-history/<KEY>.md`).
+2. **Summary table** — rows: `Repo`, `Feature branch`, `Base`, `Working tree` (always `uncommitted`), `File(s) changed`, `Review result`, `JIRA comment`, `Task history`, `Publish` (Step 13 outcome). The `Task history` row MUST contain the verified file path (`freightify-ai-brain/ai-brain/task-history/<KEY>.md`).
 3. **Your next step — stage, commit, push, then raise the MR** block — per affected repo: `cd <repo>`, `git add <file(s) changed>`, `git commit`, `git push origin <feature-branch>`, plus "open a Merge Request on GitLab from `<feature-branch>` → `<base>`". The AI never did any of these — staging/commit/push are the developer's.
 
-If task-history verification fails in step (1) of the finalize sequence, the orchestrator MUST NOT emit "complete" — it emits the halt banner (`### ▸ [12/13] task-history finalize` / `*HALT after Gate 2: finalize failed at ai-brain/task-history/<KEY>.md*`) and stops. This is the only signal that the file is missing.
+If task-history verification fails in step (1) of the finalize sequence, the orchestrator MUST NOT emit "complete" — it emits the halt banner (`### ▸ [12/13] task-history finalize` / `*HALT after Gate 2: finalize failed at freightify-ai-brain/ai-brain/task-history/<KEY>.md*`) and stops. This is the only signal that the file is missing.
 
 ## Failure handling
 Any agent failure halts the pipeline, records the failure in the task-history, and (unless `--no-jira-comment`) posts a JIRA comment summarising what's missing. The pipeline never transitions the ticket — its workflow status is left exactly as the developer set it.

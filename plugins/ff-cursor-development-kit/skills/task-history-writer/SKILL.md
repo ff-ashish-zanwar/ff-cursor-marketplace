@@ -1,17 +1,17 @@
 ---
 name: task-history-writer
-description: Append-only writer for `ai-brain/task-history/<JIRA-KEY>.md`
+description: Append-only writer for `freightify-ai-brain/ai-brain/task-history/<JIRA-KEY>.md`
 scope: pipeline-support
 inherits: plan-and-implement
 composes-rules: [no-invented-facts, no-pii-in-logs]
 when-to-invoke: Every phase transition in the `/implement`, `/bugfix`, `/plan` pipelines
 sources:
-  - efp-ai-knowledge-base/ai-brain/task-history/_template.md
+  - freightify-ai-brain/ai-brain/task-history/_template.md
 ---
 # task-history-writer
 
 ## Purpose
-Append-only writer for `ai-brain/task-history/<JIRA-KEY>.md`. Enforces the schema in `_template.md` and keeps the frontmatter in sync.
+Append-only writer for `freightify-ai-brain/ai-brain/task-history/<JIRA-KEY>.md`. Enforces the schema in `_template.md` and keeps the frontmatter in sync.
 
 ## Inputs
 - JIRA key.

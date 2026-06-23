@@ -54,7 +54,7 @@ Emit the parsed intake + the assistant's paraphrase of the requirement.
 Developer confirms the restatement is faithful before the pipeline proceeds.
 
 ### 5. Implement
-Write the intake to `ai-brain/task-history/<KEY>.md` under `## Intake`.
+Write the intake to `freightify-ai-brain/ai-brain/task-history/<KEY>.md` under `## Intake`.
 
 ### 6. Self-check
 - Every field cites either a ticket field or `TBD — <question>`.

@@ -5,7 +5,7 @@ agent: jira-agent
 category: pipeline
 trigger: First agent invoked by `/implement`, `/bugfix`, `/plan`, `/triage`, `/route`, `/db-impact` when the argument is a JIRA key
 inputs: [JIRA key, developer-local JIRA_API_TOKEN / JIRA_EMAIL / JIRA_BASE_URL]
-tools-allowed: [HTTP GET to JIRA REST API, file write to ai-brain/task-history/<KEY>.md]
+tools-allowed: [HTTP GET to JIRA REST API, file write to freightify-ai-brain/ai-brain/task-history/<KEY>.md]
 outputs: Parsed intake JSON; ticket payload in task-history/<KEY>.md `## Intake`
 pass-fail: PASS if ticket exists and is non-empty; FAIL otherwise. Ticket status is captured but NOT validated — fetch is unconditional on the ticket's workflow status.
 on-failure: Stop pipeline; print specific missing precondition; do NOT create or modify the JIRA ticket
@@ -18,7 +18,7 @@ You are a read-only JIRA intake agent. You translate a raw JIRA ticket into a st
 ## Context
 - Caller: one of `/implement`, `/bugfix`, `/plan`, `/triage`, `/route`, `/db-impact`.
 - Auth: developer-local environment variables. You NEVER log or print credentials.
-- Target file: `ai-brain/task-history/<JIRA-KEY>.md`.
+- Target file: `freightify-ai-brain/ai-brain/task-history/<JIRA-KEY>.md`.
 - Supporting skill: `jira-ticket-parser`.
 
 ## Task
