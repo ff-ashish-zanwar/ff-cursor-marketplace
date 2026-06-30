@@ -6,7 +6,7 @@ when-to-apply: Adding a new component, screen, or visual element
 globs: ["admin-frontend/src/**/*.tsx", "quote-ai-frontend/src/**/*.tsx", "extraction-frontend/src/**/*.tsx", "freightify-web/**/*.component.html"]
 awaits-adr: ADR-08
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-08-frontend-design-system.md
+  - shared-ai-brain/decision-log/2026-04-21-adr-08-frontend-design-system.md
 ---
 # Frontend design system per app (awaits ADR-08)
 

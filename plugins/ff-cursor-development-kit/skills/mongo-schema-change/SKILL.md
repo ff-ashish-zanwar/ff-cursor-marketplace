@@ -6,7 +6,7 @@ inherits: plan-and-implement
 composes-rules: [migration-safety, tenant-isolation, service-boundary-and-data-ownership, api-contract-first, testing-conventions]
 when-to-invoke: Any MongoDB schema change (new field, new index, new collection)
 sources:
-  - efp-ai-knowledge-base/01-EFP/03-efp-database-model/mongodb-models.md
+  - efp-ai-brain/01-EFP/03-efp-database-model/mongodb-models.md
   - fb-rates-go/.cursor/service-knowledge-base/data-store.md
 ---
 # mongo-schema-change

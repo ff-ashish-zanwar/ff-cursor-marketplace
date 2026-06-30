@@ -5,7 +5,7 @@ scope: workspace-universal (JIRA pipeline)
 when-to-apply: Every `/implement`, `/bugfix`, `/plan`, `/triage` invocation
 globs: []
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/01-EFP/ai-agent-routing-guide.md
+  - efp-ai-brain/01-EFP/ai-agent-routing-guide.md
 ---
 # Ticket completeness
 

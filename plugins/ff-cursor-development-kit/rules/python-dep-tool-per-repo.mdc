@@ -6,7 +6,7 @@ when-to-apply: Adding, upgrading, or removing a Python dependency
 globs: ["**/pyproject.toml", "**/requirements*.txt", "**/uv.lock", "**/Dockerfile*"]
 awaits-adr: ADR-06
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-06-python-dep-tool.md
+  - shared-ai-brain/decision-log/2026-04-21-adr-06-python-dep-tool.md
   - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
   - qa-agent/.cursor/service-knowledge-base/coding-guidelines.md
   - rate-extraction-service/.cursor/service-knowledge-base/coding-guidelines.md

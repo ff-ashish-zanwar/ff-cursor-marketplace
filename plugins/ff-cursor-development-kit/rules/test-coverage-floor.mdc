@@ -6,7 +6,7 @@ when-to-apply: Every code change touched by `/implement` or `/bugfix`
 globs: ["**/*_test.go", "**/*.test.ts", "**/tests/**", "**/__tests__/**"]
 awaits-adr: ADR-09
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-09-test-coverage-floor.md
+  - shared-ai-brain/decision-log/2026-04-21-adr-09-test-coverage-floor.md
 ---
 # Test coverage floor (awaits ADR-09)
 

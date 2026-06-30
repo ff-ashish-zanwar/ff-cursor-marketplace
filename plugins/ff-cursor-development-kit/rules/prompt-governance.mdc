@@ -3,9 +3,9 @@ name: prompt-governance
 description: Every prompt — agent system prompt, sub-agent task prompt, LLM call prompt — follows the **Role / Context / Task / Constraints / Output** shape
 scope: workspace-universal (AI workflow)
 when-to-apply: Any downstream sub-agent prompt, planner prompt, or developer-visible AI output
-globs: ["efp-ai-knowledge-base/ai-workflow/agents/**/*.md", "efp-ai-knowledge-base/ai-workflow/skills/**/*.md", "**/prompts/**/*.py", "**/prompts/**/*.ts", "**/prompt.py", "**/prompts.py"]
+globs: ["freightify-ai-workflow/agents/**/*.md", "freightify-ai-workflow/skills/**/*.md", "**/prompts/**/*.py", "**/prompts/**/*.ts", "**/prompt.py", "**/prompts.py"]
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-workflow/walkthrough-findings.md
+  - freightify-ai-workflow/walkthrough-findings.md
   - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
   - qa-agent/.cursor/service-knowledge-base/coding-guidelines.md
 ---

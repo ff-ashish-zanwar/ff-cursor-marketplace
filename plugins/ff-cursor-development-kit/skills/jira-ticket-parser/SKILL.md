@@ -6,7 +6,7 @@ inherits: plan-and-implement
 composes-rules: [no-invented-facts, ticket-completeness, no-pii-in-logs]
 when-to-invoke: Consumed by `jira-agent` at the start of every `/implement`, `/bugfix`, `/plan`, `/triage`
 sources:
-  - efp-ai-knowledge-base/01-EFP/ai-agent-routing-guide.md
+  - efp-ai-brain/01-EFP/ai-agent-routing-guide.md
 ---
 # jira-ticket-parser
 
@@ -54,7 +54,7 @@ Emit the parsed intake + the assistant's paraphrase of the requirement.
 Developer confirms the restatement is faithful before the pipeline proceeds.
 
 ### 5. Implement
-Write the intake to `freightify-ai-brain/ai-brain/task-history/<KEY>.md` under `## Intake`.
+Write the intake to `<product>-ai-brain/task-history/<KEY>.md` under `## Intake`.
 
 ### 6. Self-check
 - Every field cites either a ticket field or `TBD — <question>`.

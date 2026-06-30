@@ -6,10 +6,10 @@ when-to-apply: Any change touching fb-rates-go, fb-iqs, or any service that reso
 globs: ["fb-rates-go/**/*.go", "fb-iqs/**/*.go", "**/*tenant*", "**/middleware/**"]
 awaits-adr: ADR-03
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/01-EFP/04-efp-system-architecture/auth-flow.md
+  - efp-ai-brain/01-EFP/04-efp-system-architecture/auth-flow.md
   - fb-rates-go/.cursor/service-knowledge-base/core-components.md
   - fb-iqs/.cursor/architecture.md
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-03-tenant-isolation.md
+  - shared-ai-brain/decision-log/2026-04-21-adr-03-tenant-isolation.md
 ---
 # Tenant isolation
 

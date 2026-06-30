@@ -5,8 +5,8 @@ scope: workspace-universal (data-store changes)
 when-to-apply: Any schema change to MongoDB, MySQL, DynamoDB, or GCP Datastore
 globs: ["**/migrations/**", "**/*.migration.{go,ts,py,sql}", "**/index.yaml", "**/*_schema.{go,ts,py,json}"]
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/01-EFP/03-efp-database-model/mongodb-models.md
-  - efp-ai-knowledge-base/01-EFP/03-efp-database-model/data-model-overview.md
+  - efp-ai-brain/01-EFP/03-efp-database-model/mongodb-models.md
+  - efp-ai-brain/01-EFP/03-efp-database-model/data-model-overview.md
   - admin-backend/.cursor/service-knowledge-base/data-store.md
   - fb-rates-go/.cursor/service-knowledge-base/data-store.md
 ---

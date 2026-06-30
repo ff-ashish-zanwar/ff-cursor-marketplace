@@ -6,9 +6,9 @@ inherits: plan-and-implement
 composes-rules: [knowledge-retrieval-order, no-invented-facts]
 when-to-invoke: Consumed by `router-agent` after intake
 sources:
-  - efp-ai-knowledge-base/01-EFP/ai-agent-routing-guide.md
-  - efp-ai-knowledge-base/ai-brain/building-block-to-services.json
-  - efp-ai-knowledge-base/dictionaries/lookups.json
+  - efp-ai-brain/01-EFP/ai-agent-routing-guide.md
+  - <product>-ai-brain/routing.json
+  - shared-ai-brain/dictionaries/lookups.json
 ---
 # building-block-router
 
@@ -48,7 +48,7 @@ Emit the routing decision with citations (which alias matched, which module entr
 ### 4. Pause for human approval
 
 ### 5. Implement
-Write the routing to `freightify-ai-brain/ai-brain/task-history/<KEY>.md` under `## Routing`.
+Write the routing to `<product>-ai-brain/task-history/<KEY>.md` under `## Routing`.
 
 ### 6. Self-check
 - No building-block assigned without a keyword match or an explicit ticket label.

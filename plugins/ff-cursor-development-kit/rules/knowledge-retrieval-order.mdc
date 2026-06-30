@@ -5,19 +5,19 @@ scope: workspace-universal
 when-to-apply: Before any code reasoning, task planning, or search for "how we do X"
 globs: ["**/*"]
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/01-EFP/ai-agent-routing-guide.md
-  - efp-ai-knowledge-base/dictionaries/lookups.json
-  - efp-ai-knowledge-base/ai-brain/service-cards/
-  - efp-ai-knowledge-base/ai-brain/building-block-to-services.json
+  - efp-ai-brain/01-EFP/ai-agent-routing-guide.md
+  - shared-ai-brain/dictionaries/lookups.json
+  - <product>-ai-brain/index/
+  - <product>-ai-brain/routing.json
   - every <repo>/.cursor/agent.md
 ---
 # Knowledge retrieval order
 
 ## Rule
 Read in this exact order before answering any question about the code:
-1. `efp-ai-knowledge-base/dictionaries/lookups.json` — resolve acronyms, aliases, domain terms.
-2. `efp-ai-knowledge-base/ai-brain/` — service cards, cross-service map, ownership matrix, gaps-and-risks, decision log.
-3. `efp-ai-knowledge-base/01-EFP/` — overview, system map, glossary, routing guide, building blocks, workflows, database model, system architecture.
+1. `shared-ai-brain/dictionaries/lookups.json` — resolve acronyms, aliases, domain terms.
+2. `<product>-ai-brain/` — service cards, cross-service map, ownership matrix, gaps-and-risks, decision log.
+3. `efp-ai-brain/01-EFP/` — overview, system map, glossary, routing guide, building blocks, workflows, database model, system architecture.
 4. `<repo>/.cursor/agent.md` → `<repo>/.cursor/architecture.md` → `<repo>/.cursor/service-knowledge-base/*.md`.
 5. Repo source code only when the `.cursor/` layer is silent.
 

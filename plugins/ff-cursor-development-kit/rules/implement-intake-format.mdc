@@ -1,0 +1,53 @@
+---
+name: implement-intake-format
+description: A ticket authored by `/author-ticket` and a ticket consumed by `/implement` share **one schema**, so anything authored is implementable without rework
+scope: workspace-universal (JIRA pipeline)
+when-to-apply: Every `/author-ticket` (producer) and `/implement` / `/bugfix` (consumer)
+globs: []
+linked-knowledge-base-files:
+  - shared-ai-brain/consumer-registry.json
+---
+# implement-intake-format
+
+## Rule
+A ticket authored by `/author-ticket` and a ticket consumed by `/implement` share **one schema**, so anything authored is implementable without rework. A ticket is in-format when its description contains:
+
+1. **Problem statement / user story** — what + why.
+2. **Acceptance criteria** — at least one, testable. (`/bugfix`: also **reproduction steps**.)
+3. **Routing block** — building block, affected repo(s), suggested component, blast radius (shared-service consumers).
+
+Canonical object:
+```json
+{
+  "title": "...",
+  "type": "Story|Bug",
+  "problem_statement": "...",
+  "acceptance_criteria": ["..."],
+  "reproduction_steps": ["..."],            // bug only
+  "building_block": "My Rates Management",
+  "affected_repos": ["fb-rates-go"],
+  "component": "My Rates Management",        // JIRA component the board filters on
+  "blast_radius": ["EFP","ATLAS"]           // products affected if a shared service changes
+}
+```
+
+## Why
+`/implement`'s `ticket-completeness` gate refuses under-specified tickets. Authoring against the same schema means the producer (`ticket-composer-agent`) and the consumer (`jira-agent` → `jira-ticket-parser`) never disagree on shape — the authored ticket passes the developer's gate by construction.
+
+## Constraints
+- The producer fills every field from the brains or marks it `TBD — <question>`; it never fabricates acceptance criteria (`no-invented-facts`).
+- `building_block` / `affected_repos` come from `routing.json`; `blast_radius` from `consumer-registry.json`.
+- `component` maps to a real JIRA component via `jira-integration/jira-projects.json`; if unknown → blank + Triage.
+- The consumer (`jira-ticket-parser`) reads the same fields back out — field names here are authoritative for both lanes.
+
+## Examples
+### Good
+> Title: "Show FRLC charges on the rate card." Problem: shippers can't see FRLC line items. AC: rate card lists each FRLC charge with amount; total reconciles. Building block: My Rates Management. Repos: fb-rates-go. Component: My Rates Management. Blast radius: EFP, ATLAS.
+
+### Bad
+> "FRLC stuff" — no problem statement, no AC, no routing.
+
+## Related
+- Commands: `/author-ticket`, `/implement`, `/bugfix`.
+- Agents: `ticket-composer-agent`, `ticket-completeness-agent`, `jira-ticket-parser`.
+- Rules: `ticket-completeness`, `no-invented-facts`.

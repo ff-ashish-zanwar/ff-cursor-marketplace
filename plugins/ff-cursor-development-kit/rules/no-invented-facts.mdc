@@ -5,18 +5,18 @@ scope: workspace-universal
 when-to-apply: Anywhere a claim is being recorded (plan, rule, skill, agent output, commit message, comment)
 globs: ["**/*"]
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/README.md
+  - efp-ai-brain/README.md
 ---
 # No invented facts
 
 ## Rule
-Unknown facts are marked `TBD — <specific question>`. Never assert a fact you cannot cite from a `.cursor/` file, `efp-ai-knowledge-base/` file, or directly observed source code.
+Unknown facts are marked `TBD — <specific question>`. Never assert a fact you cannot cite from a `.cursor/` file, `<product>-ai-brain/` file, or directly observed source code.
 
 ## Why
 Confidence is cheap; accuracy is expensive. The brain, the ADR process, and every downstream agent depend on being able to trust recorded facts without re-verifying. One invented claim propagates.
 
 ## Constraints
-- Every non-trivial claim in a generated artifact carries a source reference (`<repo>/.cursor/...` or `efp-ai-knowledge-base/...` or `source:<path>:<line>`).
+- Every non-trivial claim in a generated artifact carries a source reference (`<repo>/.cursor/...` or `<product>-ai-brain/...` or `source:<path>:<line>`).
 - When in doubt, prefer `TBD — <question>` over a plausible guess.
 - Agents that produce plans or reviews must explicitly note "no evidence" when a field cannot be filled.
 

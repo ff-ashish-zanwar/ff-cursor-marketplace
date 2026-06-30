@@ -6,7 +6,7 @@ when-to-apply: Any change that affects framework/version, routing, or state-mana
 globs: ["admin-frontend/**/*.{ts,tsx}", "quote-ai-frontend/**/*.{ts,tsx}", "extraction-frontend/**/*.{ts,tsx}", "freightify-web/**/*.ts", "fb-shipper-frontend/**/*.{js,html}"]
 awaits-adr: ADR-07
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-07-frontend-framework.md
+  - shared-ai-brain/decision-log/2026-04-21-adr-07-frontend-framework.md
 ---
 # Frontend framework per app (awaits ADR-07)
 

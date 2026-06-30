@@ -7,7 +7,7 @@ composes-rules: [feature-flag-tooling, layered-architecture, testing-conventions
 awaits-adr: ADR-10
 when-to-invoke: Guarding a new user-visible behavior behind a flag
 sources:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-10-feature-flag-tooling.md
+  - shared-ai-brain/decision-log/2026-04-21-adr-10-feature-flag-tooling.md
 ---
 # feature-flag-authoring
 

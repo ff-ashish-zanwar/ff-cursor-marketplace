@@ -7,8 +7,8 @@ composes-rules: [async-transport-per-service-family, service-boundary-and-data-o
 awaits-adr: ADR-02
 when-to-invoke: Planning a new async flow; invoked by `event-contract-authoring` and `async-transport-agent`
 sources:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-02-async-messaging.md
-  - efp-ai-knowledge-base/ai-brain/building-block-to-services.json
+  - shared-ai-brain/decision-log/2026-04-21-adr-02-async-messaging.md
+  - <product>-ai-brain/routing.json
 ---
 # async-transport-selector
 

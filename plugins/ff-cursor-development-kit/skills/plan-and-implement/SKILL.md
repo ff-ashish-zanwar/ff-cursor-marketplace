@@ -8,7 +8,7 @@ sources:
   - freightify-web/.cursor/skills/feature-development/SKILL.md
   - freightify-web/.cursor/skills/bug-fix/SKILL.md
   - freightify-web/.cursor/skills/module-development/SKILL.md
-  - efp-ai-knowledge-base/ai-workflow/walkthrough-findings.md
+  - freightify-ai-workflow/walkthrough-findings.md
 ---
 # plan-and-implement
 
@@ -52,7 +52,7 @@ Run the repo's test command. Re-run related paths by hand where tests are thin. 
 ## Quality gates
 - No code written before step 4's `approve`.
 - No commit without step 7's regression pass.
-- Every step's output is recorded in `freightify-ai-brain/ai-brain/task-history/<JIRA-KEY>.md`.
+- Every step's output is recorded in `<product>-ai-brain/task-history/<JIRA-KEY>.md`.
 
 ## Composed rules
 All workspace-universal rules apply by default. Downstream skills narrow the rule set per scope.

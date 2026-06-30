@@ -6,9 +6,9 @@ when-to-apply: Any change that affects a service's auth provider or token claims
 globs: ["**/middleware/**", "**/auth/**", "**/*interceptor*", "**/*oidc*", "**/*oauth*"]
 awaits-adr: ADR-01
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-01-identity-provider.md
-  - efp-ai-knowledge-base/01-EFP/04-efp-system-architecture/auth-flow.md
-  - efp-ai-knowledge-base/ai-brain/building-block-to-services.json
+  - shared-ai-brain/decision-log/2026-04-21-adr-01-identity-provider.md
+  - efp-ai-brain/01-EFP/04-efp-system-architecture/auth-flow.md
+  - <product>-ai-brain/routing.json
 ---
 # Auth provider per service family (awaits ADR-01)
 

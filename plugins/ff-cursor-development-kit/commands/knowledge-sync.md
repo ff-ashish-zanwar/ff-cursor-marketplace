@@ -13,7 +13,7 @@ side-effects: rewrites ai-brain/service-cards/<repo>.md; may update ownership-ma
 Refresh a single service card without running a full `/brain-refresh`. Cheap and narrow.
 
 ## Inputs
-- Repo name (must match a sibling of `efp-ai-knowledge-base/`).
+- Repo name (must match a sibling of `<product>-ai-brain/`).
 
 ## Required agents
 `knowledge-base-updater-agent` (single-repo mode).

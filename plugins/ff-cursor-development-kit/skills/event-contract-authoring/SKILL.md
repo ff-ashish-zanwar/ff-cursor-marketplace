@@ -6,8 +6,8 @@ inherits: plan-and-implement
 composes-rules: [api-contract-first, async-transport-per-service-family, service-boundary-and-data-ownership, structured-logging, no-pii-in-logs, typed-error-handling]
 when-to-invoke: Publishing or consuming a new async event / queue message
 sources:
-  - efp-ai-knowledge-base/01-EFP/04-efp-system-architecture/communication-patterns.md
-  - efp-ai-knowledge-base/ai-brain/cross-service-map.md
+  - efp-ai-brain/01-EFP/04-efp-system-architecture/communication-patterns.md
+  - <product>-ai-brain/wiring/call-graph.json
   - fb-rates-go/.cursor/architecture.md
   - quote-ai-backend/.cursor/architecture.md
 ---

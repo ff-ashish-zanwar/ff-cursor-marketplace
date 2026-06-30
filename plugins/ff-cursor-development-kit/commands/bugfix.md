@@ -2,7 +2,7 @@
 name: bugfix
 description: Bug-specialized variant of `/implement`
 command: /bugfix
-arguments: <JIRA-KEY>
+arguments: <JIRA-KEY> [--any-assignee] [--no-jira-comment] [--restart]
 category: primary
 on-demand: true
 side-effects: same as /implement (leaves uncommitted changes; never stages, commits, or pushes)
@@ -18,11 +18,9 @@ Bug-specialized variant of `/implement`. Forces RCA (root-cause analysis) before
 ## Pipeline
 Identical to `/implement` with one insertion (rca-agent between router-agent and planner-agent):
 ```
-...router-agent → rca-agent → planner-agent → [GATE 1 — plan + base branches] → base-branch-picker-agent → coder-agent (no commit) → [REVIEW-READINESS GATE] → 14 review agents (parallel, on the uncommitted diff) → review-aggregator (posts consolidated comment to JIRA) → [GATE 2] → [STEP 13 — publish task-history? yes / no / later  +  attach to JIRA? yes / no] → stop (code changes uncommitted; developer commits)
+...router-agent → rca-agent → planner-agent → [GATE 1 — plan + base branches] → base-branch-picker-agent → coder-agent (no commit) → [REVIEW-READINESS GATE] → 14 review agents (parallel, on the uncommitted diff) → review-aggregator (posts consolidated comment to JIRA) → [GATE 2] → stop (changes uncommitted; developer commits)
 ```
 `rca-agent` uses the `bug-fix` skill. It produces a reproduction confirmation, evidence, and a root-cause note before anything is planned.
-
-Total phase count is **14** for `/bugfix` (one more than `/implement` because of `rca-agent`). All agent banners use `[<N>/14]` instead of `[<N>/13]`. The Review-Readiness Gate is `### ▸ [9/14] Review-Readiness Gate`; review-agents is `### ▸ [10/14]`; review-aggregator `[11/14]`; Gate 2 `[12/14]`; task-history finalize `[13/14]`; publish-history `[14/14]`.
 
 The review-aggregator step and Gate 2 ordering are identical to `/implement` — see [`commands/implement.md`](implement.md) "Review-aggregator step" and rules [`human-approval-gates`](../rules/human-approval-gates.md), [`jira-write-permissions`](../rules/jira-write-permissions.md), [`agent-attribution`](../rules/agent-attribution.md).
 
@@ -37,7 +35,7 @@ Same as `/implement`, plus an `## RCA` section in the task-history file between 
 - Fix without regression test is rejected by `test-agent`.
 - Fixing the symptom without the root cause is rejected at Gate 1.
 
-The post-Gate-2 finalize, Step 13 (publish-history) prompt, completion panel, position banner, and revise-loop discipline are identical to `/implement` — see [`commands/implement.md`](implement.md) "Step 13", "Completion panel", and "Position banner". For `/bugfix`, the checklist row for `rca-agent` is `DONE` (it's `N/A` on `/implement`), and the total row count is 14 instead of 13.
+The post-Gate-2 finalize + completion panel are identical to `/implement` — see [`commands/implement.md`](implement.md) "Completion panel". For `/bugfix`, the checklist row for `rca-agent` is `DONE` (it's `N/A` on `/implement`).
 
 ## Related
 - Commands: `/implement`, `/plan`, `/triage`.

@@ -5,9 +5,9 @@ scope: workspace-universal
 when-to-apply: Any change that reads or writes data another service owns (MongoDB collection, MySQL table, Datastore kind, DynamoDB table, bucket path)
 globs: ["**/*"]
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-brain/ownership-matrix.md
-  - efp-ai-knowledge-base/01-EFP/03-efp-database-model/data-model-overview.md
-  - efp-ai-knowledge-base/01-EFP/04-efp-system-architecture/communication-patterns.md
+  - <product>-ai-brain/wiring/data-ownership.md
+  - efp-ai-brain/01-EFP/03-efp-database-model/data-model-overview.md
+  - efp-ai-brain/01-EFP/04-efp-system-architecture/communication-patterns.md
 ---
 # Service boundary and data ownership
 

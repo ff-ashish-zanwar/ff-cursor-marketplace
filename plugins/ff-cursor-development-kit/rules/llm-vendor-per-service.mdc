@@ -6,7 +6,7 @@ when-to-apply: Adding or swapping an LLM vendor in rate-agent, qa-agent, or quot
 globs: ["rate-agent/**/*.py", "qa-agent/**/*.py", "quote-ai-backend/**/*.go"]
 awaits-adr: ADR-05
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-05-llm-vendor.md
+  - shared-ai-brain/decision-log/2026-04-21-adr-05-llm-vendor.md
   - rate-agent/.cursor/architecture.md
   - qa-agent/.cursor/ARCHITECTURE.md
   - quote-ai-backend/.cursor/architecture.md

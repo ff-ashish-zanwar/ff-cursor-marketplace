@@ -6,7 +6,7 @@ inherits: plan-and-implement
 composes-rules: [base-branch-selection, human-approval-gates, no-invented-facts]
 when-to-invoke: Consumed by `base-branch-picker-agent` immediately after Gate 1 approves the plan, before the coder-agent writes any code
 sources:
-  - efp-ai-knowledge-base/ai-workflow/walkthrough-findings.md
+  - freightify-ai-workflow/walkthrough-findings.md
 ---
 # base-branch-picker
 
@@ -19,7 +19,7 @@ For each affected repo, ask the developer which base branch to build on, verify 
 
 ## Outputs
 - Per repo: `{ repo, base_branch, feature_branch }`.
-- Entry appended to `freightify-ai-brain/ai-brain/task-history/<KEY>.md` under `## Base Branches Chosen`.
+- Entry appended to `<product>-ai-brain/task-history/<KEY>.md` under `## Base Branches Chosen`.
 - Developer's checkout in each affected repo is on `ai/<JIRA-KEY>-<short-slug>`, based on `origin/<chosen-base>`, with a clean working tree.
 
 ## 7 steps

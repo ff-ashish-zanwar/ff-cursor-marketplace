@@ -6,9 +6,9 @@ when-to-apply: Introducing a new async/queue-backed flow
 globs: ["**/queue*/**", "**/asynq/**", "**/taskqueue/**", "**/*listener*", "**/*poller*"]
 awaits-adr: ADR-02
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-02-async-messaging.md
-  - efp-ai-knowledge-base/ai-brain/cross-service-map.md
-  - efp-ai-knowledge-base/ai-brain/building-block-to-services.json
+  - shared-ai-brain/decision-log/2026-04-21-adr-02-async-messaging.md
+  - <product>-ai-brain/wiring/call-graph.json
+  - <product>-ai-brain/routing.json
 ---
 # Async transport per service family (awaits ADR-02)
 

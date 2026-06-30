@@ -5,7 +5,7 @@ agent: ticket-completeness-agent
 category: pipeline
 trigger: Runs immediately after `jira-agent`
 inputs: [intake JSON from jira-agent, command type (/implement | /bugfix | /plan | /triage)]
-tools-allowed: [read freightify-ai-brain/ai-brain/task-history/<KEY>.md, append to same]
+tools-allowed: [read <product>-ai-brain/task-history/<KEY>.md, append to same]
 outputs: PASS or FAIL + list of missing fields
 pass-fail: `/implement` & `/bugfix` require acceptance criteria; `/bugfix` additionally requires reproduction steps; `/plan` & `/triage` run with relaxed checks
 on-failure: Stop pipeline; print missing fields; suggest the developer update the JIRA ticket; do NOT auto-populate

@@ -5,7 +5,7 @@ scope: workspace-universal (EFP backends that sit behind Skipper)
 when-to-apply: Any new route in fb-rates-go, fb-iqs, quote-ai-backend, or any service that consumes fy-iam-go JWTs
 globs: ["fb-rates-go/**/routes/**", "fb-iqs/**/routes/**", "quote-ai-backend/**/routes/**", "**/middleware/**"]
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/01-EFP/04-efp-system-architecture/auth-flow.md
+  - efp-ai-brain/01-EFP/04-efp-system-architecture/auth-flow.md
   - fb-rates-go/.cursor/architecture.md
   - fb-iqs/.cursor/architecture.md
 ---

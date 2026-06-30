@@ -7,7 +7,7 @@ composes-rules: [error-envelope, typed-error-handling, api-contract-first, struc
 awaits-adr: ADR-04
 when-to-invoke: Adding or modifying an error path / central error handler
 sources:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-04-error-envelope.md
+  - shared-ai-brain/decision-log/2026-04-21-adr-04-error-envelope.md
   - fb-rates-go/.cursor/service-knowledge-base/coding-guidelines.md
 ---
 # error-envelope-authoring

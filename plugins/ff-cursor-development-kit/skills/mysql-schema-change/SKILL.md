@@ -6,7 +6,7 @@ inherits: plan-and-implement
 composes-rules: [migration-safety, service-boundary-and-data-ownership, testing-conventions]
 when-to-invoke: Any MySQL schema change
 sources:
-  - efp-ai-knowledge-base/01-EFP/03-efp-database-model/data-model-overview.md
+  - efp-ai-brain/01-EFP/03-efp-database-model/data-model-overview.md
   - admin-backend/.cursor/service-knowledge-base/data-store.md
   - fy-iam-go/.cursor/service-knowledge-base/data-store.md
 ---

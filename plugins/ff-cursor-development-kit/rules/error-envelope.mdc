@@ -6,7 +6,7 @@ when-to-apply: Any new error path or HTTP error response shape
 globs: ["**/error*.{go,ts,py}", "**/errors.{go,ts,py}", "**/handler*.{go,ts,py}", "**/middleware/**"]
 awaits-adr: ADR-04
 linked-knowledge-base-files:
-  - efp-ai-knowledge-base/ai-brain/decision-log/2026-04-21-adr-04-error-envelope.md
+  - shared-ai-brain/decision-log/2026-04-21-adr-04-error-envelope.md
 ---
 # Error envelope (awaits ADR-04)
 
