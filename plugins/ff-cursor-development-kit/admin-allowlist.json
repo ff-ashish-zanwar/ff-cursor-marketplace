@@ -1,0 +1,6 @@
+{
+  "_comment": "Admins allowed to run audience:admin commands (e.g. /brain-refresh). The command checks the caller's RESOLVED identity (Atlassian MCP email/accountId, else git user.email) against this list. A `--role admin` flag is required as an explicit opt-in but is NOT sufficient on its own — see rules/admin-only.md. Ships into the plugin via sync-plugin.sh.",
+  "admins": [
+    "ashish.zanwar@freightify.com"
+  ]
+}

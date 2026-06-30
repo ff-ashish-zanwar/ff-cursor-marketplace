@@ -1,0 +1,30 @@
+---
+name: admin-only
+description: A command marked `audience: admin` runs **only for an admin**
+scope: workspace-universal (governance)
+when-to-apply: Any command whose frontmatter declares `audience: admin` (e.g. /brain-refresh)
+globs: []
+---
+# admin-only
+
+## Rule
+A command marked `audience: admin` runs **only for an admin**. Before doing anything with side effects, the command MUST gate on the **resolved caller identity**, not on a flag:
+
+1. **Resolve the caller's real identity**, in order: Atlassian MCP `atlassianUserInfo` email / `accountId` (if connected) → else `git config user.email` → else `$USER`.
+2. **Load `admin-allowlist.json`** (ships in the plugin / engine root).
+3. **Require BOTH:** the explicit opt-in flag `--role admin` **and** the resolved identity present in the allowlist. If either is missing → **refuse and stop** (no side effects), with:
+   > This is an admin-only command. Your identity (`<resolved>`) is not on the admin allowlist, or `--role admin` was not supplied. Ask a workspace admin.
+
+## Why
+- **A `--role admin` flag alone is spoofable** — any user can type it. The allowlist, checked against the *resolved* identity, is the real gate; the flag is only an explicit acknowledgment.
+- Keeps admin commands **in the same plugin** (so they're present) while preventing daily/accidental use by normal users.
+- `audience: admin` makes the command self-identifying, so it can be filtered, hidden, or split into a separate admin plugin later.
+
+## Constraints
+- Never trust a flag-supplied username or role over the resolved identity. `--user <name>` is informational only; it is never the authorization.
+- The allowlist is **config, not code** — admins edit `admin-allowlist.json`; names are never hardcoded in command logic.
+- The identity check runs **first**; no read/write/PR happens before it passes.
+
+## Related
+- Config: `admin-allowlist.json`.
+- Commands: `/brain-refresh` (`audience: admin`).
