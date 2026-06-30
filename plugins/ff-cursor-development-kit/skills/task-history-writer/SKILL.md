@@ -15,7 +15,7 @@ Append-only writer for `<product>-ai-brain/task-history/<JIRA-KEY>.md`. Enforces
 
 ## Inputs
 - JIRA key.
-- Phase name (`jira-intake` | `completeness` | `routing` | `rca` | `plan` | `gate-1` | `base-branch-picked` | `code` | `review-ready` | `review` | `review-aggregated` | `gate-2` | `halted`).
+- Phase name (`jira-intake` | `completeness` | `routing` | `rca` | `plan` | `gate-1` | `base-branch-picked` | `code` | `review-ready` | `review` | `review-aggregated` | `gate-2` | `publish` | `halted`). `publish` is invoked only by `/publish-history`, never by `/implement`.
 - Phase payload (intake, routing, plan, base-branch choices, code artifacts, review result, etc.).
 
 ## Outputs
@@ -38,7 +38,8 @@ Skill is internal; no developer approval needed.
 (skipped for this internal skill)
 
 ### 5. Implement
-- Frontmatter: update `last-phase`. For `base-branch-picked`, append `{repo, base, feature}` entries to `branches` with empty `commit_sha`. `commit_sha` stays empty for the whole pipeline — the pipeline never commits, so no phase back-fills it. The `review-ready` phase records the Review-Readiness Gate approval; `code` records files touched/tests added and that the tree is left uncommitted.
+- Frontmatter: update `last-phase`. For `base-branch-picked`, append `{repo, base, feature}` entries to `branches` with empty `commit_sha`. `commit_sha` stays empty for the whole pipeline — the pipeline never commits, so no phase back-fills it. The `review-ready` phase records the Review-Readiness Gate approval; `code` records files touched/tests added and that the tree is left uncommitted. At `gate-2`, set `published: false` (the record becomes pending).
+- The **`publish`** phase (called ONLY by `/publish-history`) sets `published: true`, `published-by`, `published-at`, `publish-branch`, then `publish-mr`, and appends the `## Publish` section (MR branch + URL into `development`). It is the only phase that runs `git` in `<product>-ai-brain` (branch off `development` → commit the `.md` → push → raise MR); it **never merges** and never touches service repos. On push/MR failure it reverts `published` to `false`.
 - Body: append a `## <Phase>` section if the section does not exist yet; if it already exists, sub-append a timestamped subsection; never rewrite.
 
 ### 6. Self-check
