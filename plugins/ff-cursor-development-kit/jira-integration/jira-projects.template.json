@@ -1,0 +1,29 @@
+{
+  "_comment": "TEMPLATE / schema reference. The real jira-projects.json is TEAM-LOCAL: `/author-ticket` first-run setup (or --reconfigure) creates it at the WORKSPACE ROOT by fetching THAT team's product's JIRA projects + components and filling this shape. The plugin ships only this template — it never bundles any product's real config, so a team's plugin doesn't expose other products' projects. (The admin's full filled copy lives in the engine at jira-integration/jira-projects.json.)",
+  "schema_version": "1.1.0",
+  "site": "TBD — your Atlassian site, e.g. fb-tech.atlassian.net",
+  "cloudId": "TBD — from getAccessibleAtlassianResources",
+  "building_blocks_are_components": true,
+  "products": {
+    "<PRODUCT>": {
+      "projects": [
+        {
+          "key": "TBD",
+          "name": "TBD",
+          "default": true,
+          "boards": [{ "name": "TBD", "id": "TBD", "filter_field": "component" }],
+          "building_blocks": ["<filled from the project's live JIRA components>"]
+        }
+      ]
+    }
+  },
+  "support_projects": [
+    {
+      "key": "TBD",
+      "name": "TBD — optional support intake project",
+      "covers": ["<products this support project triages to>"],
+      "boards": [{ "name": "TBD", "id": "TBD", "filter_field": "component" }],
+      "building_blocks": ["<support components>"]
+    }
+  ]
+}
