@@ -17,6 +17,19 @@ linked-knowledge-base-files:
 
 Bug tickets (`/bugfix`) additionally require **reproduction steps**.
 
+## Leaf-only rule (hierarchy)
+`/implement` operates on exactly one **leaf** issue → one plan → three gates → one MR. Whether a key is a leaf is
+decided by its issue type + children (read by `jira-agent` from `fields.issuetype`, `fields.subtasks`, `fields.parent`):
+
+- **Sub-task**, or a **childless Story/Task/Bug** → it is a leaf → implement it directly. For a Sub-task, `jira-agent` also captures `fields.parent` so the plan has the parent's context.
+- **Story/Task that HAS sub-tasks** → it is a **container**, not a leaf. `ticket-completeness-agent` FAILS it and `jira-agent` HALTS with a **guided redirect** — it lists the children so the developer can re-run on one (`run /implement on one of: EFP-1235 …`). This is a helpful redirect, not a blunt refusal. Escape hatch: `--parent-scope` implements the parent's *own* description (ignoring the children); future `--all-subtasks` fans out one run per child.
+
+**Authoring completeness (`/author-ticket`).** When a tree is authored, EACH user-listed sub-task must independently
+satisfy this rule (problem statement + ≥1 acceptance criterion, + reproduction steps if that sub-task is a bug) — a
+sub-task is a future `/implement` leaf, so it must be leaf-ready by construction. The parent must have a problem
+statement / user story; its acceptance criteria may be a rollup of its sub-tasks'. A sub-task the AI cannot fully
+ground is surfaced with `TBD — <question>` for the user to fill at Gate-P; it is never fabricated.
+
 JIRA workflow status is **not** part of this rule. The pipeline accepts a ticket in any status (`To Do`, `In Progress`, `In Review`, `Done`, etc.). The ticket's status is captured into the intake for traceability but does not gate the pipeline, and the pipeline never transitions the ticket.
 
 ## Why
@@ -36,6 +49,6 @@ The `ai-agent-routing-guide.md` mandatory checklist (step 1) treats ticket intak
 > Ticket EFP-1234: "FRLC category stuff".
 
 ## Related
-- Agents: `ticket-completeness-agent`, `jira-agent`.
-- Commands: `/implement`, `/bugfix`, `/plan`, `/triage`.
-- Rules: `human-approval-gates`.
+- Agents: `ticket-completeness-agent`, `jira-agent` (leaf detection).
+- Commands: `/implement` (leaf-only), `/bugfix`, `/plan`, `/triage`, `/author-ticket` (per-leaf authoring completeness).
+- Rules: `human-approval-gates`, `implement-intake-format` (tree shape).

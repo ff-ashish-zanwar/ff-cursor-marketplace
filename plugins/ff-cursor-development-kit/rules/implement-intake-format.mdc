@@ -16,11 +16,11 @@ A ticket authored by `/author-ticket` and a ticket consumed by `/implement` shar
 2. **Acceptance criteria** — at least one, testable. (`/bugfix`: also **reproduction steps**.)
 3. **Routing block** — building block, affected repo(s), suggested component, blast radius (shared-service consumers).
 
-Canonical object:
+Canonical object (a single leaf issue):
 ```json
 {
   "title": "...",
-  "type": "Story|Bug",
+  "type": "Story|Task|Bug",                  // parent type is AI-classified; a leaf may be any of these
   "problem_statement": "...",
   "acceptance_criteria": ["..."],
   "reproduction_steps": ["..."],            // bug only
@@ -31,13 +31,56 @@ Canonical object:
 }
 ```
 
+## Hierarchical (tree) shape — `/author-ticket`
+`/author-ticket` may author a **tree**: one parent issue (`Story|Task|Bug`, AI-classified) plus zero or more
+**sub-tasks** the user listed. Each sub-task is a leaf and MUST satisfy the leaf schema above so it is
+`/implement`-ready on its own. The parent is a **container**: it carries the problem/story and links the leaves;
+`/implement` runs on **leaves**, never on a parent that has sub-tasks (see [`ticket-completeness`](ticket-completeness.md)).
+
+```json
+{
+  "parent": {
+    "title": "...",
+    "type": "Story|Task|Bug",               // AI-proposed from the idea, user-confirmed at Gate-P
+    "problem_statement": "...",
+    "acceptance_criteria": ["..."],          // parent-level, may be a rollup of the sub-tasks
+    "building_block": "...",
+    "component": "...",
+    "epic": "EFP-900" | null                 // existing epic to link (never auto-picked); null = no link
+  },
+  "sub_tasks": [                             // user-listed only; AI enriches, never invents (unknowns → TBD)
+    {
+      "title": "...", "type": "Sub-task",    // sub-tasks are ALWAYS issuetype Sub-task
+      "problem_statement": "...", "acceptance_criteria": ["..."],
+      "reproduction_steps": ["..."],         // if the sub-task is a bug
+      "building_block": "...", "affected_repos": ["..."], "component": "...", "blast_radius": ["..."]
+    }
+  ]
+}
+```
+A flat single-issue authoring is just this tree with `sub_tasks: []` — the parent then *is* the leaf and is
+`/implement`-ready directly.
+
+## Fields are createmeta-driven (read live, never hardcode)
+Which fields exist on an issue, which are **required**, and their allowed values are read at author-time from JIRA
+**createmeta** for the resolved `project + issuetype` — never hardcoded. The AI fills what it can ground
+(summary, description = problem + AC + repro, component = building block, issue type, parent, labels); the user
+sets the rest at Gate-P or via flags (assignee, priority, sprint, fix version, story points, team custom fields).
+**Required-field guard:** every field createmeta marks `required` must be satisfied before create — fill it from its
+default (e.g. fb-tech's custom **Issue Source** defaults to `User Generated`), else prompt the user, so create never
+fails on a missing required field. `type` values (`Story|Task|Bug|Sub-task`) come live from the project's createmeta,
+not from this doc.
+
 ## Why
 `/implement`'s `ticket-completeness` gate refuses under-specified tickets. Authoring against the same schema means the producer (`ticket-composer-agent`) and the consumer (`jira-agent` → `jira-ticket-parser`) never disagree on shape — the authored ticket passes the developer's gate by construction.
 
 ## Constraints
 - The producer fills every field from the brains or marks it `TBD — <question>`; it never fabricates acceptance criteria (`no-invented-facts`).
+- **Sub-tasks are user-listed, never AI-invented.** The AI enriches (routes + drafts problem/AC for) each sub-task the user provides; it never adds sub-tasks the user didn't ask for. Unknowns inside a sub-task become `TBD — <question>` (`no-invented-facts`). Optional `suggest` mode may *propose* a breakdown for the user to accept/edit at Gate-P, but the tree is never created without the user's confirmation.
+- Each sub-task in `sub_tasks[]` MUST independently satisfy the leaf schema (problem + ≥1 AC, + repro if it's a bug) — that is what makes it `/implement`-ready.
 - `building_block` / `affected_repos` come from `routing.json`; `blast_radius` from `consumer-registry.json`.
 - `component` maps to a real JIRA component via `jira-integration/jira-projects.json`; if unknown → blank + Triage.
+- The parent's `epic` is an **existing** epic to link, resolved from `--epic`, an inline mention, or a Gate-P shortlist — **never auto-picked**; `null` means no link. A new epic is created only with `--create-epic` (see [`jira-write-permissions`](jira-write-permissions.md)).
 - The consumer (`jira-ticket-parser`) reads the same fields back out — field names here are authoritative for both lanes.
 
 ## Examples

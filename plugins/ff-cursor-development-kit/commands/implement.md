@@ -2,7 +2,7 @@
 name: implement
 description: Primary entry point
 command: /implement
-arguments: <JIRA-KEY> [--any-assignee] [--no-jira-comment] [--restart]
+arguments: <JIRA-KEY> [--any-assignee] [--no-jira-comment] [--restart] [--parent-scope]
 category: primary
 on-demand: true
 side-effects: writes task-history/<KEY>.md; creates feature branches on affected repos; leaves uncommitted changes on those branches (never stages, never commits, never pushes)
@@ -10,11 +10,19 @@ side-effects: writes task-history/<KEY>.md; creates feature branches on affected
 # /implement <JIRA-KEY>
 
 ## Purpose
-Primary entry point. Runs the full pipeline up to **uncommitted** changes on developer-chosen base branches. The developer reviews, stages, commits, and pushes themselves.
+Primary entry point. Runs the full pipeline up to **uncommitted** changes on developer-chosen base branches. The developer reviews, stages, commits, and pushes themselves. **One run = one leaf issue** → one plan → three gates → one MR.
 
 ## Inputs
 - JIRA ticket key. Any workflow status is accepted (`To Do`, `In Progress`, `In Review`, `Done`, etc.) — the ticket's status is captured into the task-history intake but does not gate the pipeline.
+- The key must be a **leaf**: a Sub-task, or a childless Story/Task/Bug. A Story/Task with sub-tasks is a **container** — `jira-agent` halts and redirects you to the children (see the Leaf-only rule below).
 - Developer-local `JIRA_API_TOKEN`, `JIRA_EMAIL`, `JIRA_BASE_URL`.
+
+## Leaf-only rule (hierarchy)
+`jira-agent` reads `fields.issuetype`, `fields.subtasks`, and `fields.parent` and classifies the key per [`ticket-completeness`](../rules/ticket-completeness.md):
+- **Sub-task** or **childless Story/Task/Bug** → implement directly. For a Sub-task, the parent (key + summary) is captured into the intake for the planner's context.
+- **Story/Task with sub-tasks** → **HALT with a guided redirect**: `jira-agent` lists the children and asks you to `run /implement on one of: <child keys>`. This is a helpful redirect, not a refusal — the parent is a container, its sub-tasks are the leaves.
+- **`--parent-scope`** (escape hatch) → implement the container parent's *own* description, ignoring its children. Use when the parent itself carries the code-level work.
+- `--all-subtasks` (fan out one run per child) is reserved for a future release and is not yet executed.
 
 ## Pipeline
 ```

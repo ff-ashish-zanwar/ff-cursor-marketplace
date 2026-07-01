@@ -15,12 +15,15 @@ Agents may perform exactly these JIRA operations and no others:
 | Allowed | Forbidden |
 |---|---|
 | Read tickets, fields, comments, attachments | Delete / archive tickets, sub-tasks, epics |
-| **Create ONE issue** — only under `/author-ticket`, after Gate-P `approve`, via `jira-writer-agent` | Create tickets under any other command; bulk-create; create sub-tasks / epics |
+| Read **createmeta** (fields / required / allowed values) for a project + issue type | — |
+| **Create one issue tree** — only under `/author-ticket`, after Gate-P `approve`, via `jira-writer-agent`: one parent (`Story\|Task\|Bug`) + its user-listed **sub-tasks** (`parent=<key>`) | Create tickets under any other command; bulk-create beyond the approved tree; invent sub-tasks the user did not list |
+| **Link** the parent to an **existing** Epic (always allowed under `/author-ticket`) | Auto-pick an Epic to link; link across products |
+| **Create** a new Epic — ONLY with explicit `--create-epic` under `/author-ticket`, after Gate-P `approve` | Create an Epic under any other command or without `--create-epic` |
 | Add a new comment on a ticket | Delete or hide any comment (own or others') |
 | Update a comment **the agent itself authored** | Update or edit a comment authored by a human |
 | Read project / board / sprint metadata | Create, modify, or delete projects, boards, sprints, workflows |
 | Read ticket transitions / status | Transition / change ticket status (the pipeline never moves a ticket) |
-| — | Delete or modify attachments, links, watchers, assignees, labels, fix-versions |
+| — | Delete or modify attachments, links, watchers, assignees, labels, fix-versions (except setting them on issues this run just created) |
 
 **Delete is universally forbidden.** No agent under any command may delete any JIRA entity (ticket, sub-task, comment, attachment, link, label, board, project, sprint, version, anything), even if the developer explicitly requests it.
 
@@ -41,7 +44,10 @@ No paraphrasing, no "but I can do X instead" follow-up unless the developer asks
 - The orchestrator (`/implement`, `/bugfix`) is the single writer for review-finding comments — individual review agents return findings to the orchestrator and never call the JIRA API themselves.
 - A comment-update is only legal when the comment was authored by the same agent in the same pipeline run (e.g., correcting a typo before Gate 2 fires). Edits to historical comments are forbidden even if AI-authored.
 - Refusal applies even inside a `revise <notes>` reply — if the notes contain a delete request, the agent refuses that part and asks the developer to remove or rephrase.
-- **Issue-create exception (narrow):** the ONLY sanctioned create is one new issue by `jira-writer-agent` under `/author-ticket`, and only after the product user approves Gate-P. It creates exactly one issue per run (idempotent on the record's `key`), never sub-tasks/epics, never under any other command, and still never deletes, transitions, reassigns, or archives. Create remains forbidden everywhere else.
+- **Issue-create exception (hierarchical, narrow):** the ONLY sanctioned create is `jira-writer-agent` under `/author-ticket`, and only after the product user approves Gate-P. It may create the **approved tree**: one parent issue (`Story|Task|Bug`) and the user-listed **sub-tasks** the user confirmed at Gate-P (each with `parent=<parent-key>`). It creates the **parent first**, captures its key, then each sub-task; it never creates sub-tasks the user did not list. It is idempotent on the record's stored keys (a re-run never re-creates an already-created parent or sub-task). It creates nothing under any other command, and still never deletes, transitions, reassigns, or archives.
+- **Epic linking vs epic creation:** linking the created parent to an **existing** Epic is always allowed under `/author-ticket` (the link mechanism — `parent` field vs the classic "Epic Link" custom field — is discovered from createmeta). The Epic to link is chosen by the user (`--epic <KEY>`, `--epic "name"` resolved via search, inline mention, or a Gate-P shortlist) — **never auto-picked**, and linking is optional (no pick → no link). **Creating** a new Epic is allowed ONLY with the explicit `--create-epic` flag, after Gate-P `approve`; without that flag no Epic is ever created.
+- **Required-field guard on create:** `jira-writer-agent` reads createmeta for the resolved project + issue type and satisfies every `required` field before POSTing — from the field's default where one exists (e.g. fb-tech's required custom **Issue Source** → `User Generated`), else by prompting the user — so a create never fails on a missing required field. This is field-setting on issues it is creating, not modification of pre-existing issues.
+- Create remains forbidden everywhere else.
 
 ## Examples
 

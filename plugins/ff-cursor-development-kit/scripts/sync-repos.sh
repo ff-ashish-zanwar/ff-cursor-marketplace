@@ -1,16 +1,25 @@
 #!/usr/bin/env bash
 #
-# sync-repos.sh — pull the latest on every product repo in one shot.
+# sync-repos.sh — pull the latest base branch on every product repo in one shot.
 #
 # For each repo under every <Product>-Repos/ folder in the workspace:
 #   1. Skip AI brains (names matching *ai-brain* or *ai-knowledge-base*).
 #   2. If the only working-tree change is a stray .DS_Store, discard it.
-#   3. Pick the integration branch: prefer `development`, fall back to `dev`.
-#      If neither exists on origin, skip the repo.
-#   4. Checkout that branch and `git pull`.
-#   5. On any other problem (dirty tree, conflict, auth, detached, etc.) the
-#      repo is SKIPPED — never force-reset, never stash, never lose work.
-# A summary table is printed at the end.
+#   3. Pick the base branch:
+#        a. If the repo is listed in config/git-branch.json → use that branch.
+#        b. Otherwise fall back to the ordered `fallback_branches` from that file
+#           (default: development → dev → IMD-Development → imd-dev) and use the
+#           FIRST that exists on origin. If none exist, skip the repo.
+#   4. Checkout that branch and `git pull --ff-only`.
+#   5. On any other problem (dirty tree, conflict, auth, detached, mapped branch
+#      missing, etc.) the repo is SKIPPED — never force-reset, never stash, never
+#      lose work.
+# A per-repo status report (repo · branch · SUCCESS/FAILURE) is printed at the end,
+# so every repo is accounted for.
+#
+# CONFIG: <workspace-root>/config/git-branch.json (repo→branch map + fallback_branches).
+#   Read with jq if present, else python3, else a grep fallback. If the file is
+#   absent, every repo just uses the default fallback sequence.
 #
 # Usage:
 #   bash sync-repos.sh                 # auto-detect the workspace root
@@ -35,12 +44,14 @@ fi
 
 # ---- args -------------------------------------------------------------------
 WORKSPACE="${FREIGHTIFY_WORKSPACE:-}"
+DRY_RUN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --workspace) WORKSPACE="${2:-}"; shift 2 ;;
     --workspace=*) WORKSPACE="${1#*=}"; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
     -h|--help)
-      sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+      sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown argument: $1 (try --help)"; exit 2 ;;
   esac
 done
@@ -73,6 +84,56 @@ WS="$(find_workspace)" || {
   exit 1
 }
 echo "${B}Workspace:${X} $WS"
+
+# ---- config: repo → base branch map -----------------------------------------
+CONFIG="$WS/config/git-branch.json"
+DEFAULT_FALLBACK=(development dev IMD-Development imd-dev)
+
+# Look up the mapped branch for a repo. Echoes the branch, or nothing if unmapped.
+# Prefers jq, then python3, then a grep fallback — so no hard dependency on jq.
+lookup_branch() {
+  local repo="$1"
+  [ -f "$CONFIG" ] || return 0
+  if command -v jq >/dev/null 2>&1; then
+    jq -r --arg r "$repo" '.repositories[$r] // empty' "$CONFIG" 2>/dev/null
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+    print(d.get("repositories",{}).get(sys.argv[2],""))
+except Exception:
+    pass' "$CONFIG" "$repo" 2>/dev/null
+  else
+    # grep fallback: match  "repo": "branch"
+    grep -Eo "\"$repo\"[[:space:]]*:[[:space:]]*\"[^\"]+\"" "$CONFIG" 2>/dev/null \
+      | head -1 | sed -E 's/.*:[[:space:]]*"([^"]+)"/\1/'
+  fi
+}
+
+# Load the fallback sequence from config (else the built-in default).
+load_fallback() {
+  local list=""
+  if [ -f "$CONFIG" ]; then
+    if command -v jq >/dev/null 2>&1; then
+      list="$(jq -r '.fallback_branches[]?' "$CONFIG" 2>/dev/null)"
+    elif command -v python3 >/dev/null 2>&1; then
+      list="$(python3 -c 'import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+    print("\n".join(d.get("fallback_branches",[])))
+except Exception:
+    pass' "$CONFIG" 2>/dev/null)"
+    fi
+  fi
+  if [ -n "$list" ]; then printf '%s\n' "$list"; else printf '%s\n' "${DEFAULT_FALLBACK[@]}"; fi
+}
+FALLBACK_BRANCHES=(); while IFS= read -r b; do [ -n "$b" ] && FALLBACK_BRANCHES+=("$b"); done < <(load_fallback)
+
+if [ -f "$CONFIG" ]; then
+  echo "${B}Config:${X}    $CONFIG  ${DIM}(fallback: ${FALLBACK_BRANCHES[*]})${X}"
+else
+  echo "${Y}Config:    none found at $CONFIG — using fallback: ${FALLBACK_BRANCHES[*]}${X}"
+fi
 echo
 
 # ---- result accumulators ----------------------------------------------------
@@ -84,10 +145,10 @@ is_brain() { case "$1" in *ai-brain*|*ai-knowledge-base*) return 0;; *) return 1
 
 process_repo() {
   local dir="$1" group="$2" name; name="$(basename "$dir")"
-  cd "$dir" 2>/dev/null || { SKIPPED+=("$group|$name|cannot enter directory"); return; }
+  cd "$dir" 2>/dev/null || { SKIPPED+=("$group|$name|-|cannot enter directory"); return; }
 
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    SKIPPED+=("$group|$name|not a git repo"); return
+    SKIPPED+=("$group|$name|-|not a git repo"); return
   fi
 
   # --- dirty-tree handling: discard a lone .DS_Store, otherwise skip ----------
@@ -101,28 +162,47 @@ process_repo() {
         [ "$(basename "$f")" = ".DS_Store" ] && rm -f "$f" 2>/dev/null
       done
       if [ -n "$(git status --porcelain 2>/dev/null | grep -v '\.DS_Store$')" ]; then
-        SKIPPED+=("$group|$name|dirty tree after discarding .DS_Store"); return
+        SKIPPED+=("$group|$name|-|dirty tree after discarding .DS_Store"); return
       fi
       note=".DS_Store discarded"
     else
-      SKIPPED+=("$group|$name|uncommitted changes (not just .DS_Store)"); return
+      SKIPPED+=("$group|$name|-|uncommitted changes (not just .DS_Store)"); return
     fi
   fi
 
-  # --- choose integration branch: development first, then dev -----------------
-  local branch=""
-  if git ls-remote --heads origin development 2>/dev/null | grep -q 'refs/heads/development$'; then
-    branch="development"
-  elif git ls-remote --heads origin dev 2>/dev/null | grep -q 'refs/heads/dev$'; then
-    branch="dev"
+  # --- choose the base branch: config mapping first, else fallback sequence ----
+  remote_has() { git ls-remote --heads origin "$1" 2>/dev/null | grep -q "refs/heads/$1$"; }
+  local branch="" mapped; mapped="$(lookup_branch "$name")"
+  if [ -n "$mapped" ]; then
+    # Repo is pinned in config/git-branch.json — that branch must exist on origin.
+    if remote_has "$mapped"; then
+      branch="$mapped"
+    else
+      SKIPPED+=("$group|$name|$mapped|mapped branch '$mapped' not found on origin"); return
+    fi
+  else
+    # Not pinned — walk the fallback sequence, first that exists on origin wins.
+    local fb
+    for fb in "${FALLBACK_BRANCHES[@]}"; do
+      if remote_has "$fb"; then branch="$fb"; break; fi
+    done
+    [ -z "$branch" ] && { SKIPPED+=("$group|$name|-|none of [${FALLBACK_BRANCHES[*]}] exist on origin"); return; }
   fi
-  [ -z "$branch" ] && { SKIPPED+=("$group|$name|no development/dev branch"); return; }
+
+  # --- dry-run: report the chosen branch without touching the repo ------------
+  if [ "$DRY_RUN" = "1" ]; then
+    local src; [ -n "$mapped" ] && src="config" || src="fallback"
+    local cur0; cur0="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+    PULLED+=("$group|$name|$branch|would checkout ($src) + pull${note:+ ($note)}${cur0:+; now on $cur0}")
+    printf '  %s•%s %-28s %s%s%s  %swould checkout+pull (%s)%s\n' "$C" "$X" "$name" "$C" "$branch" "$X" "$DIM" "$src" "$X"
+    return
+  fi
 
   # --- checkout (record a switch for transparency) ----------------------------
   local cur; cur="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
   if [ "$cur" != "$branch" ]; then
     if ! git checkout "$branch" >/dev/null 2>&1; then
-      SKIPPED+=("$group|$name|cannot checkout $branch (was on $cur)"); return
+      SKIPPED+=("$group|$name|$branch|cannot checkout $branch (was on $cur)"); return
     fi
     note="${note:+$note; }switched from $cur"
   fi
@@ -136,8 +216,8 @@ process_repo() {
     printf '  %s✓%s %-28s %s%s%s  %s%s%s\n' "$G" "$X" "$name" "$C" "$branch" "$X" "$DIM" "$summary" "$X"
   else
     summary="$(printf '%s\n' "$out" | tail -1)"
-    SKIPPED+=("$group|$name|pull failed: $summary")
-    printf '  %s↷%s %-28s %sskip — pull failed%s\n' "$Y" "$X" "$name" "$Y" "$X"
+    SKIPPED+=("$group|$name|$branch|pull failed: $summary")
+    printf '  %s↷%s %-28s %s%s%s  %sskip — pull failed%s\n' "$Y" "$X" "$name" "$C" "$branch" "$X" "$Y" "$X"
   fi
 }
 
@@ -160,16 +240,18 @@ echo "${G}Pulled:${X} ${#PULLED[@]}    ${Y}Skipped:${X} ${#SKIPPED[@]}    ${DIM}
 echo
 
 if [ ${#PULLED[@]} -gt 0 ]; then
-  echo "${G}${B}✓ Pulled${X}"
+  echo "${G}${B}✓ SUCCESS${X}"
+  printf '  %-11s %-28s %-16s %s\n' "PRODUCT" "REPO" "BRANCH" "RESULT"
   for r in "${PULLED[@]}"; do IFS='|' read -r g n b s <<<"$r"
-    printf '  %-11s %-28s %-12s %s\n' "$g" "$n" "$b" "$s"
+    printf '  %-11s %-28s %s%-16s%s %s\n' "$g" "$n" "$C" "$b" "$X" "$s"
   done
   echo
 fi
 if [ ${#SKIPPED[@]} -gt 0 ]; then
-  echo "${Y}${B}↷ Skipped${X}"
-  for r in "${SKIPPED[@]}"; do IFS='|' read -r g n reason <<<"$r"
-    printf '  %-11s %-28s %s\n' "$g" "$n" "$reason"
+  echo "${Y}${B}✗ FAILURE / SKIPPED${X}"
+  printf '  %-11s %-28s %-16s %s\n' "PRODUCT" "REPO" "BRANCH" "REASON"
+  for r in "${SKIPPED[@]}"; do IFS='|' read -r g n b reason <<<"$r"
+    printf '  %-11s %-28s %-16s %s\n' "$g" "$n" "$b" "$reason"
   done
   echo
 fi
