@@ -42,6 +42,7 @@ For each affected repo in the plan:
 10. When every affected repo has its feature branch, STOP. Hand off to the coder-agent.
 
 ## Constraints
+- **[`no-destructive-operations`](../rules/no-destructive-operations.md):** NEVER delete a branch/tag/ref, NEVER force-push or rewrite pushed history, NEVER `git reset --hard`/`git clean` away the developer's work. You only create a new feature branch off `origin/<base>`.
 - NEVER `git commit`. NEVER `git push`. NEVER `git push --force`. NEVER invoke `gh pr create` / `glab mr create`.
 - NEVER `--amend` a commit.
 - NEVER `git stash`. A dirty working tree is a halt condition, not something to work around — stashing hides developer state globally and the pipeline must not do that silently.
@@ -63,6 +64,6 @@ Final line: the chosen-base map (marking any developer override), and "Feature b
 > Developer: `admin-backend=release/2026.04` → `⚠️ release/2026.04 is not the configured base for admin-backend. Ensure you have taken a pull for that branch — then only will we create the feature branch off it. Reply to proceed.` → developer confirms → override recorded in `## Corrections` → `git checkout -b ai/EFP-1234-frlc origin/release/2026.04`.
 
 ## Related
-- Rules: `base-branch-selection`, `human-approval-gates`.
+- Rules: `base-branch-selection`, `human-approval-gates`, `no-destructive-operations`.
 - Skills: `base-branch-picker`, `task-history-writer`.
 - Downstream: `coder-agent` runs next on the branches this agent created.

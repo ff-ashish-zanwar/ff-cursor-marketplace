@@ -19,20 +19,43 @@ The `/implement` and `/bugfix` pipelines have **three mandatory, non-skippable**
 
 The Review-Readiness Gate's prompt to the developer is fixed:
 
-> Coding is complete on `<feature-branch>` — the changes are on your working tree, **uncommitted and unstaged**. Review them and make any edits you want. When you're ready, reply `approve` to start the 14 review agents / `revise <notes>` (coder-agent re-runs) / `reject`.
+> Coding is complete on `<feature-branch>` — the changes are on your working tree, **uncommitted and unstaged**. Review them and make any edits you want. When you're ready, reply `approve` to start the 14 review agents — or just tell me what to change and I'll redo the coding step (no need to type "revise") / `reject`.
 
 Gate 2's prompt to the developer is fixed:
 
-> All 14 review agents have posted their findings as a consolidated comment on `<JIRA-KEY>`. Please review the JIRA comment first, then reply `approve` / `revise <notes>` / `reject`. On approve, the changes remain uncommitted — you stage, commit, and push them yourself.
+> All 14 review agents have posted their findings as a consolidated comment on `<JIRA-KEY>`. Please review the JIRA comment first, then reply `approve` — or just tell me what to change and I'll redo the relevant step (no need to type "revise") / `reject`. On approve, the changes remain uncommitted — you stage, commit, and push them yourself.
 
-Each gate accepts exactly one of three replies: `approve`, `reject`, or `revise <notes>`. Gate 1 additionally accepts per-repo base overrides in the same reply.
+Each gate resolves to one of three outcomes — **approve**, **revise**, or **reject** — but the developer is **not required to type those exact words** (see "Interpreting the reply" below). Gate 1 additionally accepts per-repo base overrides in the same reply.
+
+## Interpreting the reply — by intent, not keyword
+A gate reply is classified by **what the developer means**, not by an exact keyword match. The literal tokens
+`approve` / `revise <notes>` / `reject` are canonical shortcuts, but the developer may answer in plain language and the
+orchestrator MUST map the reply:
+
+- **Approve** — the developer clearly signals the work is good to proceed ("approve", "looks good", "ship it", "yes go
+  ahead"). → advance to the next phase.
+- **Revise (implicit OR explicit)** — the developer gives **any substantive feedback, correction, requested change, or
+  new instruction — even without the word "revise"** (e.g. *"also handle the null tariff case"*, *"rename the field to
+  frlcCategory"*, *"use release/2026.04 for admin-backend"*). → treat the whole message as `revise <notes>`: **re-enter
+  the CURRENT phase/step** with those notes, increment `revise-count`, and capture the change in `## Corrections`. The
+  developer never has to type "revise" — talking naturally is enough, and the pipeline resumes from the right step.
+- **Reject** — the developer signals stop/abandon ("reject", "stop", "abort"). → halt and finalize.
+
+**Safety rule (non-negotiable): never treat feedback as approval, and never advance on an unclear reply.** Advancing is
+the consequential direction (it starts the 14 reviews, finalizes the run, or creates JIRA issues), so bias away from it:
+- If a reply mixes apparent approval with a requested change, or is otherwise **ambiguous between approve and revise**
+  (e.g. *"looks fine, though maybe tidy the logging"*), the orchestrator MUST NOT advance. It asks **one short
+  clarifying question** — *"Should I redo this step with that change, or approve as-is?"* — and waits for the answer.
+- Only an unambiguous approval advances. Anything actionable → revise (re-run the current step). Anything unclear → ask.
+
+This applies to **every** gate: Gate 1, the Review-Readiness Gate, and Gate 2 (`/implement`, `/bugfix`), and Gate-P (`/author-ticket`).
 
 ## Why
 This is the 7-step meta-pattern used in every `freightify-web/.cursor/skills/**/SKILL.md`. The pipeline is authorized to think, search, and generate — but not to commit human-visible work without explicit approval.
 
 ## Constraints
 - No "silent" gates; each gate emits a Checkpoint summarizing what was produced and what is about to happen.
-- `revise <notes>` re-enters the current phase; it does not advance.
+- `revise` (whether typed as `revise <notes>` or given as plain-language feedback per "Interpreting the reply") re-enters the current phase; it does not advance. Never advance on feedback or on an unclear reply — resolve to revise or ask one clarifying question first.
 - `reject` halts the pipeline and preserves partial artifacts in `task-history/<KEY>.md`.
 - Tools that run unattended (e.g., CI) must not impersonate a human at these gates; the developer's explicit reply is required.
 - **Review-Readiness Gate ordering is mandatory**: no review agent may run until the developer has approved this gate. `coder-agent` finishes, leaves the changes uncommitted, and the orchestrator emits the Review-Readiness Gate prompt and waits. Fanning out to the review agents before this approval is a pipeline bug — the developer must be able to edit the code first.
@@ -53,8 +76,14 @@ This is the 7-step meta-pattern used in every `freightify-web/.cursor/skills/**/
 ### Good
 > Gate 1 emitted after planner-agent. Developer replies `revise: also update the admin-backend lookup table`. Planner re-runs with that constraint.
 
+> Review-Readiness Gate. Developer replies — **without the word "revise"** — *"the controller should use the typed exception, not a bare catch"*. The orchestrator reads this as feedback → re-runs `coder-agent` with that note (implicit revise), increments `revise-count`, logs it in `## Corrections`, then re-emits the gate. It does NOT start the reviews.
+
+> Gate 2. Developer replies *"looks fine, though maybe tidy the logging"* (ambiguous). The orchestrator does not advance — it asks *"Should I redo the coding step to tidy the logging, or approve as-is?"* and waits.
+
 ### Bad
 > Coder-agent starts writing code after planner-agent without any Gate 1 reply because the test harness auto-approved.
+
+> Developer gives feedback at a gate without saying "revise"; the orchestrator treats it as approval and advances (starts the reviews / finalizes) with the feedback unaddressed. (Never advance on feedback — that's the safety rule.)
 
 ## Related
 - Skills: `plan-and-implement`, `task-history-writer`, and every skill that composes them.

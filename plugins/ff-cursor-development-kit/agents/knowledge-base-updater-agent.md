@@ -28,8 +28,9 @@ You are the brain's maintainer. You re-ingest the `.cursor/` layer of affected r
 5. Append drift notes to `gaps-and-risks.md`.
 
 ## Constraints
+- **[`no-destructive-operations`](../rules/no-destructive-operations.md):** git writes here only ever **create a new branch + open one MR** (`/brain-refresh` / `/publish-history`). NEVER delete a branch/tag/MR, NEVER force-push or rewrite pushed history, NEVER `git reset --hard`, NEVER merge — the MR is opened for a human to review and merge.
 - NEVER invent a fact. Every non-trivial field cites a `.cursor/` file or `TBD — <question>`.
-- NEVER destroy a human-added note in `gaps-and-risks.md`; append below them.
+- NEVER destroy a human-added note in `gaps-and-risks.md`; append below them (regeneration overwrites only auto-generated sections, never hand-written ones).
 - Service-card frontmatter must match the uniform schema.
 - Run is idempotent; re-running overwrites the target files with no drift.
 
@@ -38,4 +39,4 @@ List of artifacts touched + diff summary + new TBDs added.
 
 ## Related
 - Commands: `/brain-refresh`, `/knowledge-sync`, `/service-card`, `/gap-report`, `/tbd-report`.
-- Rules: `knowledge-retrieval-order`, `no-invented-facts`.
+- Rules: `knowledge-retrieval-order`, `no-invented-facts`, `no-destructive-operations`.

@@ -5,6 +5,7 @@ command: /brain-refresh
 arguments: <EFP|RMS|ATLAS|shared|all> --role admin
 category: brain-maintenance
 audience: admin
+admins: [ashish.zanwar@freightify.com]
 on-demand: true
 side-effects: opens a PR on the targeted brain repo with regenerated graph/index/wiring/routing; never auto-merges; never overwrites hand-written notes
 ---
@@ -14,7 +15,7 @@ side-effects: opens a PR on the targeted brain repo with regenerated graph/index
 **Admin-only.** Refresh a brain by (a) re-reading every in-scope repo's `.cursor/` **and** (b) **mining the human corrections** captured in task-history (`## Corrections`) — so the brain gets *more accurate* over time, not just re-derived. The corrections are the feedback loop: where the AI guessed and a human fixed it, the fix flows back into the brain.
 
 ## Authorization
-`audience: admin` → governed by [`admin-only`](../rules/admin-only.md). The command resolves the caller's real identity (Atlassian MCP email/`accountId`, else `git user.email`) and **refuses unless it is in `admin-allowlist.json` AND `--role admin` was supplied**. The flag alone is never sufficient.
+`audience: admin` → governed by [`admin-only`](../rules/admin-only.md). The list of admins is **hardcoded in this command's `admins:` frontmatter** (currently `ashish.zanwar@freightify.com`) — there is no separate allowlist file. The command resolves the caller's real identity (Atlassian MCP email/`accountId`, else `git user.email`) and **refuses unless that identity is in the `admins:` list AND `--role admin` was supplied**. The flag alone is never sufficient. To add or remove an admin, edit the `admins:` list above and re-run `scripts/sync-plugin.sh`.
 
 ## Targets
 | Target | Refreshes | Scope |
@@ -35,6 +36,6 @@ side-effects: opens a PR on the targeted brain repo with regenerated graph/index
 - Periodically (e.g. monthly) as hygiene. Admin only.
 
 ## Related
-- Rules: `admin-only`, `no-invented-facts`, `knowledge-retrieval-order`. Config: `admin-allowlist.json`.
+- Rules: `admin-only`, `no-invented-facts`, `knowledge-retrieval-order`. Admins: hardcoded in this command's `admins:` frontmatter.
 - Commands: `/knowledge-sync` (one repo), `/service-card`.
 - Docs: `jira-integration/audit-trail.md` (the `## Corrections` log). Schema: `brain-schema/`.

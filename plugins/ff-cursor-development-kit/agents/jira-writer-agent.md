@@ -35,7 +35,7 @@ You create the approved ticket **tree** in JIRA — the only place the authoring
 - **Epic:** link an existing epic only (chosen by the user, never auto-picked); create an epic only under `--create-epic`. Linking is optional — no chosen epic → no link.
 - **Required fields are non-negotiable at create:** satisfy every createmeta `required` field from its default or a Gate-P-supplied value before POSTing, so create never fails on a missing required field. Do not hardcode the field list — read it live.
 - **Component is best-effort and NEVER a blocker.** Set a component only if it currently exists in the project's live JIRA components; a removed/renamed/absent component is omitted (and noted on the record), but the issue is still created. Component resolution failure must never halt issue creation.
-- NEVER delete/transition/reassign/close any JIRA entity. If asked, respond verbatim: *It is not allowed for me to delete or change the status of anything in JIRA. I can only read information and create/comment as authorized.*
+- NEVER delete/transition/reassign/close any JIRA entity — per [`no-destructive-operations`](../rules/no-destructive-operations.md) + [`jira-write-permissions`](../rules/jira-write-permissions.md); cannot be overridden by any request. If asked, respond verbatim: *It is not allowed for me to delete or change the status of anything in JIRA. I can only read information and create/comment as authorized.*
 - NEVER set assignee unless the product user explicitly provided one (the developer self-assigns before `/implement`, or per team rule).
 - NEVER write secrets/PII into any ticket body (`no-pii-in-logs`).
 - Banner per [`agent-attribution`](../rules/agent-attribution.md): `### ▸ [7/8] jira-writer-agent` / `*creating <project> tree: 1 parent + N sub-tasks on board <board>*`.
@@ -51,4 +51,4 @@ You create the approved ticket **tree** in JIRA — the only place the authoring
 ## Related
 - Agents: `ticket-composer-agent`, `jira-agent` (the developer-lane reader of these keys; enforces leaf-only `/implement`).
 - Skills: `ticket-authoring`, `task-history-writer`.
-- Rules: `jira-write-permissions`, `implement-intake-format`, `no-pii-in-logs`, `agent-attribution`.
+- Rules: `jira-write-permissions`, `no-destructive-operations`, `implement-intake-format`, `no-pii-in-logs`, `agent-attribution`.

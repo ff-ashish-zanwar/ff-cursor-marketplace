@@ -48,8 +48,8 @@ When `coder-agent` finishes, the changes sit on each feature branch's working tr
 
 1. Banners `### ▸ [8/12] Review-Readiness Gate` / `*coding done — review/edit the uncommitted changes, then approve to start reviews*`.
 2. Emits the fixed Review-Readiness Gate prompt per [`human-approval-gates`](../rules/human-approval-gates.md):
-   > Coding is complete on `<feature-branch>` — the changes are on your working tree, **uncommitted and unstaged**. Review them and make any edits you want. When you're ready, reply `approve` to start the 14 review agents / `revise <notes>` (coder-agent re-runs) / `reject`.
-3. Waits for the developer. `approve` → run the 14 review agents against the current working-tree diff. `revise <notes>` → re-enter `coder-agent` with the notes (banner `[7/12]` again). `reject` → halt and finalize task-history.
+   > Coding is complete on `<feature-branch>` — the changes are on your working tree, **uncommitted and unstaged**. Review them and make any edits you want. When you're ready, reply `approve` to start the 14 review agents — or just tell me what to change and I'll redo the coding step (no need to type "revise") / `reject`.
+3. Waits for the developer, and interprets the reply **by intent, not keyword** (per [`human-approval-gates`](../rules/human-approval-gates.md)). Clear approval → run the 14 review agents against the current working-tree diff. **Any substantive feedback or requested change — even without the word "revise"** → treat it as a revise: re-enter `coder-agent` with that message as the notes (banner `[7/12]` again), increment `revise-count`, log it in `## Corrections`. Clear stop → `reject` → halt and finalize task-history. **Never advance on feedback or an unclear reply** — if it's ambiguous between approve and revise, ask one short clarifying question first.
 
 The developer's own manual edits made at this gate are part of the working tree, so the reviewers see exactly what the developer intends to ship.
 
@@ -97,6 +97,7 @@ If any reviewer returns a **Blocker**, the orchestrator still posts the consolid
 - Ticket must satisfy `ticket-completeness`.
 - Affected repos must have a clean working tree at `base-branch-picker-agent` time; dirty tree halts the pipeline (the agent never stashes).
 - All **three** human approval gates are non-skippable (`human-approval-gates`); Gate 1 also carries the per-repo base-branch choices. The Review-Readiness Gate sits between `coder-agent` and the reviewers.
+- **Every gate interprets the developer's reply by intent, not keyword** (`human-approval-gates`): substantive feedback given *without* the word `revise` is treated as a revise (re-run the current step with that feedback); only a clear approval advances; an ambiguous reply triggers one clarifying question. The pipeline never advances on feedback or an unclear reply. This holds for Gate 1, the Review-Readiness Gate, and Gate 2.
 - The pipeline **never stages, commits, or pushes**. `base-branch-picker-agent` only creates branches; `coder-agent` only edits the working tree (`base-branch-selection`). The developer stages, commits, and pushes themselves after Gate 2.
 - No review agent may run until the developer approves the Review-Readiness Gate. All 14 review agents MUST then run before Gate 2 — none may be skipped. They review the **uncommitted working-tree diff** (`git diff origin/<base>`). The orchestrator MUST aggregate their findings into one JIRA comment and post it before emitting the Gate 2 prompt (`human-approval-gates`).
 - Review agents return findings to the orchestrator only; they do not call the JIRA API themselves (`jira-write-permissions`).

@@ -31,10 +31,13 @@ figure out *which* repo and component a change belongs to, and *what else* a sha
    This is how you get every command (`/start`, `/author-ticket`, `/implement`, …). *You do not clone the engine.*
 2. **Clone the two brains** into `{{PRODUCT}}-Repos/`, alongside your service repos:
    `{{product}}-ai-brain` and `shared-ai-brain`.
-3. **Connect the Atlassian MCP** in your IDE. Once it's connected there's no JIRA token to manage — the AI reads
-   and creates JIRA tickets through it.
+3. **Give the AI JIRA access — pick ONE:**
+   - **(a) Connect the Atlassian MCP directly in your IDE** *(recommended)* — once it's connected there's no token to
+     manage; the AI reads and creates JIRA tickets straight through it.
+   - **(b) OR set local JIRA credentials** — `JIRA_API_TOKEN`, `JIRA_EMAIL`, `JIRA_BASE_URL` as env vars (used only if
+     the Atlassian MCP isn't connected). See `ai-platform/freightify-ai-workflow/jira-integration/auth-and-secrets.md`.
 
-That's it — the AI **auto-detects** you're the **{{PRODUCT}}** team from this folder. Nothing to configure.
+That's it — the AI **auto-detects** you're the **{{PRODUCT}}** team from this folder. Nothing else to configure.
 
 ## 3. How you got here — `/start`
 
@@ -42,41 +45,65 @@ You're reading this because you ran **`/start`** (or you're about to — the roo
 
 - **detects your product** from this workspace ({{PRODUCT}}) and **generates this `getting-started.md`** for it;
 - **prints a one-screen orientation** — the two front doors, the flow, and the setup checklist;
-- is safe to **re-run any time** — it refreshes this guide to the current command set. It writes only this file and
-  never touches JIRA.
+- is safe to **re-run any time** — it refreshes this guide to the current command set (and seeds `config/git-branch.json`
+  the first time, if it's missing). It never touches JIRA.
 
 Because `/start` generates this file on **your** machine, nobody has to hand you a copy — it's always right for your product.
 
 ## 4. The two front doors
 
-**Author a ticket** — turn a plain-English idea (and any sub-tasks you list) into complete, ready-to-build JIRA
-tickets, routed to the right project, component, and repos:
-
-```
-/author-ticket "let shippers see FRLC charges on the rate card"
-```
-
-The AI drafts the ticket (or a **parent + sub-tasks** tree if you list sub-tasks), you review and approve it at one
-gate, and it creates the JIRA issue(s) for you.
-
-**Build a ticket** — take a JIRA key and run the full pipeline up to reviewed, **uncommitted** code:
-
-```
-/implement {{PRODUCT}}-1234
-```
-
-Plan → **you approve** → code → 14 automated reviews → **you approve**. Three human gates; you stay in control the
-whole way. The AI never commits or pushes — after the final gate you stage, commit, push, and raise the MR yourself.
-
-### The flow, end to end
+There are two commands you'll live in. **`/author-ticket`** *creates* well-formed JIRA tickets; **`/implement`**
+*builds* them. They're two ends of the same pipe — `/author-ticket` produces exactly the ticket shape `/implement`
+expects, so anything you author is buildable without rework.
 
 ```
 /author-ticket "<idea>"  →  JIRA ticket(s)  →  /implement <KEY>  →  reviewed, UNCOMMITTED code
                                                                     →  you stage, commit, push, raise the MR
 ```
 
-Author and build are two ends of the same pipe: `/author-ticket` produces exactly the ticket shape `/implement`
-expects, so anything you author is buildable without rework.
+### Door 1 — `/author-ticket "<idea>"`  · author a ticket
+Turn a plain-English idea (and any sub-tasks you list) into complete, `/implement`-ready JIRA tickets — routed to the
+right project, component, and repos.
+
+```
+/author-ticket "let shippers see FRLC charges on the rate card"
+```
+Optionally list sub-tasks (one per line, optional `repo:` prefix) and the AI authors a **parent + sub-tasks tree**.
+
+**What happens, in order:**
+1. **Restate** — the AI restates your idea (and captures your sub-task list) and asks you to confirm.
+2. **Route** — it scopes to **{{PRODUCT}}** and routes the parent and each sub-task to a building block → repo(s) + component.
+3. **Draft** — it drafts each ticket in the required shape (title, problem, acceptance criteria, +repro for bugs),
+   classifies the parent type (Story/Task/Bug), and finds an epic to link (never auto-picked).
+4. **Gate-P (you approve)** — you review the **whole tree**, edit/add/remove sub-tasks, confirm type + epic, set
+   fields, then `approve` / `revise` / `reject`.
+5. **Create** — on approve, it creates the JIRA issue(s): parent first, then each sub-task linked to it.
+
+**Result:** a JIRA key (or a parent + sub-task keys) ready for `/implement`. *(Flags: `--type`, `--epic`,
+`--create-epic`, `--bug`, `--suggest`, `--product`, `--project`, `--board`.)*
+
+### Door 2 — `/implement <JIRA-KEY>`  · build a ticket
+Take one **leaf** ticket (a sub-task, or a ticket with no sub-tasks) and run the full pipeline up to reviewed,
+**uncommitted** code. Three human gates; you stay in control the whole way.
+
+```
+/implement {{PRODUCT}}-1234
+```
+
+**What happens, in order:**
+1. **Intake** — fetches the ticket, checks it's complete, and routes it to the affected repo(s). *(If the key is a
+   parent that has sub-tasks, it stops and points you to the children — run `/implement` on a leaf.)*
+2. **Plan → Gate 1 (you approve)** — it produces a cross-repo plan and shows the **base branch per repo** (from
+   `config/git-branch.json`). You approve, keep or change each base branch.
+3. **Branch + code** — it cuts a fresh feature branch off the latest base and writes the code — **left uncommitted**
+   on your working tree (it never `git add`/`commit`/`push`).
+4. **Review-Readiness Gate (you approve)** — review/edit the uncommitted changes yourself, then approve to start reviews.
+5. **14 reviews → Gate 2 (you approve)** — 14 review agents check the diff; findings are posted as one JIRA comment;
+   you read it and approve.
+6. **Stop** — the changes stay uncommitted. **You** stage, commit, push, and raise the MR.
+
+*(Flags: `--any-assignee`, `--no-jira-comment`, `--restart`, `--parent-scope`.)* Bugs: use **`/bugfix <KEY>`** — same
+pipeline with an added root-cause step.
 
 ## 5. The other commands
 

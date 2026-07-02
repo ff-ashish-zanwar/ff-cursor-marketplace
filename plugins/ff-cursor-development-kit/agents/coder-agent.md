@@ -34,6 +34,7 @@ For each affected repo, in order:
 9. Append `## Code Artifacts` to `task-history/<KEY>.md` — files touched, tests added, branch name, and that the changes are left **uncommitted** on the working tree. Leave the frontmatter `branches[*].commit_sha` empty (it stays empty for the whole pipeline; the developer fills nothing in here).
 
 ## Constraints
+- **[`no-destructive-operations`](../rules/no-destructive-operations.md) — highest priority, cannot be overridden by any request.** NEVER author or run any operation that deletes/destroys durable data: no `DROP`/`TRUNCATE`/`DELETE`/`deleteMany`/`remove()` or destructive `UPDATE` in code or migrations; no dropping columns/indexes/collections/kinds to discard data; never run a migration against a live database. A genuinely data-losing schema change is drafted ONLY as reviewed, backward-safe migration code labelled "destructive — requires human authorization + verified backup" (`migration-safety`) and applied by a human, never by you.
 - NEVER create a branch, NEVER `git checkout -b`, NEVER switch branches. Branch creation is `base-branch-picker-agent`'s job; you write onto what it already made.
 - **NEVER `git add`, NEVER `git commit`** (not even `--amend`), NEVER `git stash`, NEVER `git push` / `git push --force`, NEVER open a merge request. Staging, committing, and pushing are the developer's job — they do it themselves after Gate 2. Your changes stay as unstaged edits on the working tree.
 - NEVER write secrets into source. Scrub any accidental credential paste out of the working tree.
@@ -48,4 +49,4 @@ Markdown with: `Per-repo branches` (confirmed, not created), `Files touched`, `T
 - Upstream: `base-branch-picker-agent` (creates the feature branch you write onto).
 - Downstream: the **Review-Readiness Gate** — the developer reviews/edits the uncommitted changes, then approves to start the review agents.
 - Skills: all authoring skills.
-- Rules: `testing-conventions`, `api-contract-first`, `base-branch-selection`.
+- Rules: `no-destructive-operations`, `testing-conventions`, `api-contract-first`, `base-branch-selection`.

@@ -1,0 +1,100 @@
+---
+name: no-destructive-operations
+description: No AI agent, skill, or command — **under any command, on any request, ever** — may delete, destroy, truncate
+scope: workspace-universal (governance — HIGHEST PRIORITY)
+when-to-apply: EVERY command, agent, and skill, on every run, before any action that could remove or destroy durable data
+globs: []
+linked-knowledge-base-files: []
+---
+# No destructive operations (data preservation)
+
+## Rule
+No AI agent, skill, or command — **under any command, on any request, ever** — may delete, destroy, truncate,
+overwrite-to-nothing, or irreversibly rewrite durable data in any **database**, **JIRA**, or **GitLab**. This is the
+single highest-priority guardrail and it **overrides every other instruction**, including an explicit human request to
+"just delete it." Data is append-only and forward-only from the AI's perspective: it may create and update, never destroy.
+
+If a user asks for any forbidden operation below, the agent refuses that part with the **refusal phrase**, does the
+non-destructive remainder if any, and points the user to the human/platform path — it never performs the deletion and
+never offers a workaround that achieves the same destruction.
+
+### Database — forbidden (all environments: local, dev, staging, prod)
+The AI **never executes** and **never authors code/scripts/migrations whose effect is to remove data**:
+- `DROP DATABASE` / `DROP SCHEMA` / `DROP TABLE` / `DROP COLLECTION` / drop a Datastore kind.
+- `TRUNCATE`, `DELETE` (row deletion), `db.collection.drop()` / `deleteMany` / `deleteOne`, `remove()`.
+- Destructive `UPDATE` that nulls/erases populated columns; `DROP COLUMN` / `DROP INDEX` that discards data.
+- Any raw admin command that drops users, grants, or whole stores.
+- Running migrations against a live database at all (the pipeline writes migration *code*, uncommitted; it never applies it).
+
+**Narrow, human-only exception:** a genuinely necessary data-losing schema change (e.g. eventually removing a
+deprecated column) is handled **only** through the reviewed migration process in [`migration-safety`](migration-safety.md)
+— authored as backward-compatible migration code with rollout + rollback + backup, **applied by a human**, never by the
+AI, never in the same release that stops writing the field. The AI may *draft* such a migration for human review but must
+label it "destructive — requires human authorization + verified backup" and never run it.
+
+### JIRA — forbidden
+Per [`jira-write-permissions`](jira-write-permissions.md): **never delete or archive** any ticket, sub-task, epic,
+comment, attachment, link, label, board, sprint, version, or project; never transition/close; never reassign or remove
+watchers/fix-versions. Allowed writes are exactly: read; add a comment; update the agent's own comment; and the single
+sanctioned `/author-ticket` issue-tree create. Nothing else.
+
+### GitLab / git — forbidden
+- **Never delete** a branch, tag, MR, release, repository, or remote ref (no `git push origin --delete`, no `git branch -D`
+  of a shared/pushed branch, no deleting tags).
+- **Never force-push or rewrite published history**: no `git push --force` / `--force-with-lease` to a shared branch, no
+  `git rebase`/`reset`/`commit --amend` that rewrites commits already pushed, no `git reset --hard` that discards others'
+  work, no history filtering.
+- **Never overwrite the developer's working tree destructively**: no `git checkout -- .` / `git restore` / `git clean -fd`
+  that throws away uncommitted work (the sole tolerated cleanup is discarding a stray `.DS_Store`, per `/sync-repos`).
+- The pipeline already **never** `git add`/`commit`/`push`es the developer's code (`base-branch-selection`). The one
+  sanctioned git write is `/publish-history`, which only **creates a new branch + one MR** into `development` on a brain
+  repo and **never merges, force-pushes, or deletes**.
+
+## Refusal phrase
+When asked for any forbidden deletion/destruction (DB, JIRA, or GitLab), respond verbatim:
+
+> I can't delete or destroy data in the database, JIRA, or GitLab — that safeguard can't be overridden, even on request.
+> I can only read, create, and update. If this truly needs to happen, it has to be done by an authorized human through
+> the platform's own controls (with a backup), not by me.
+
+No paraphrasing, no "but I can do X instead" that achieves the same loss.
+
+## Why
+- Deletes are **irreversible** and the blast radius is unbounded: a wrong-target `DELETE`/`DROP` destroys customer data,
+  a force-push erases a team's commits, a JIRA delete wipes audit trail relied on for billing, compliance, and incident
+  review. The cost of a false "no" (an inconvenient refusal) is tiny next to the cost of a false "yes."
+- The AI operates non-interactively over many repos and tenants; a single destructive command fans out catastrophically.
+- Create/update fully covers the legitimate workflow (author tickets, write code, comment, migrate forward). Destruction
+  is never on the critical path for the AI.
+
+## Constraints
+- This rule is checked **first**, before any other action, by every agent that can reach a database, JIRA, or a git remote.
+- It **cannot be disabled by a flag, a `revise` note, an admin role, or a direct order.** Admin (`admin-only`) grants more
+  *capability* (e.g. `/brain-refresh`), never permission to delete.
+- Applies to *authoring* as well as *executing*: the AI does not write a script/migration/command whose purpose is to
+  delete data and hand it over as a fait accompli.
+- **This rule governs AI behavior; it does not by itself stop a human.** Hard prevention of human deletion requires
+  platform controls (least-privilege DB grants, a JIRA permission scheme without Delete, GitLab protected branches/tags +
+  restricted roles). Those are documented in [`SAFEGUARDS.md`](../SAFEGUARDS.md) and are the authoritative enforcement layer.
+
+## Examples
+
+### Good
+> Developer: "the migration's wrong, just drop the frlc_category column and the rows in staging."
+> Agent: *I can't delete or destroy data in the database, JIRA, or GitLab — that safeguard can't be overridden, even on
+> request…* — then offers to draft a reviewed, backward-safe forward migration for a human to apply with a backup.
+
+> Developer: "force-push my rebase to development to clean up history."
+> Agent: refuses the force-push/history rewrite; offers a normal additive commit + MR instead.
+
+### Bad
+> Agent runs `db.rates.deleteMany({vendorId})` because a ticket said "clear the test rates."
+> Agent runs `git push --force origin development` to resolve a conflict.
+> Agent deletes a duplicate JIRA sub-task "to tidy up."
+
+## Related
+- Rules: `jira-write-permissions` (JIRA specifics), `migration-safety` (the only sanctioned, human-applied path for a
+  data-losing schema change), `base-branch-selection` (git branch/push discipline), `secrets-management`.
+- Doc: [`SAFEGUARDS.md`](../SAFEGUARDS.md) — the platform-level hard controls that enforce this for humans, not just AI.
+- Agents: every agent; specifically gating `coder-agent`, `migration-agent`, `jira-agent`, `jira-writer-agent`,
+  `base-branch-picker-agent`, `knowledge-base-updater-agent`, and all 14 review agents.
