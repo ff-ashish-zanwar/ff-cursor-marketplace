@@ -12,3 +12,10 @@
 *.log
 tmp/
 temp/
+
+# macOS / iCloud conflict copies (e.g. "start 2.md") — created when iCloud races
+# a file rewrite (sync-plugin.sh). Harmless dupes; never commit them.
+* [0-9].md
+* [0-9].mdc
+* [0-9]/
+* [0-9]
