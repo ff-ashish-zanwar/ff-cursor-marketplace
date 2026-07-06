@@ -1,13 +1,15 @@
 {
-    "name": "ff-cursor-development-kit",
-    "displayName": "Freightify cursor development kit",
-    "version": "0.2.0",
-    "description": "On-demand, JIRA-driven AI SDLC pipeline for Freightify products (EFP, RMS, ATLAS). Product users author /implement-ready tickets with /author-ticket; developers run /implement, /bugfix, /plan, /triage with three human approval gates.",
-    "author": {
-      "name": "Freightify",
-      "email": "ashish.zanwar@freightify.com"
-    },
-    "license": "UNLICENSED",
-    "keywords": ["freightify"],
-    "logo": "assets/logo.svg"
-  }
+  "name": "ff-cursor-development-kit",
+  "displayName": "Freightify cursor development kit",
+  "version": "0.2.4",
+  "description": "On-demand, JIRA-driven AI SDLC pipeline for Freightify products (EFP, RMS, ATLAS). Product users author /implement-ready tickets with /author-ticket; developers run /implement, /bugfix, /plan, /triage with three human approval gates.",
+  "author": {
+    "name": "Freightify",
+    "email": "ashish.zanwar@freightify.com"
+  },
+  "license": "UNLICENSED",
+  "keywords": [
+    "freightify"
+  ],
+  "logo": "assets/logo.svg"
+}

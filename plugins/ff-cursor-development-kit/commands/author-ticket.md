@@ -2,10 +2,10 @@
 name: author-ticket
 description: Entry point for **developers / EMs / tech-leads** to turn an idea into a **complete, `/implement`-ready JIRA ticket tree** — one parent (`Story|Task|Bug`) plus the sub-tasks they list — using the AI-brains to route each node to the right building block, repos, project, and board
 command: /author-ticket
-arguments: "<free-text idea>" [sub-tasks: one per line, optional `repo:` prefix] [--product <EFP|RMS|ATLAS>] [--project <KEY>] [--type <Story|Task|Bug>] [--bug] [--epic <KEY|"name">] [--create-epic] [--suggest] [--board <name>] [--reconfigure]
+arguments: "<free-text idea>" | <existing STORY-KEY>   [sub-tasks: one per line, optional `repo:` prefix] [--parent <STORY-KEY>] [--product <EFP|RMS|ATLAS>] [--project <KEY>] [--type <Story|Task|Bug>] [--bug] [--epic <KEY|"name">] [--create-epic] [--suggest] [--board <name>] [--reconfigure]
 category: primary (product)
 on-demand: true
-side-effects: writes <product>-ai-brain/task-history/<PARENT-KEY>.md (## Authoring section); optionally CREATES one JIRA issue TREE (one parent + its user-listed sub-tasks) and LINKS an existing epic (opt-in, confirmed at Gate-P); creates a new epic ONLY with --create-epic; NEVER deletes, transitions, or reassigns any JIRA entity
+side-effects: writes <product>-ai-brain/task-history/<PARENT-KEY>.md (## Authoring section); optionally CREATES a JIRA issue TREE (a NEW parent + its user-listed sub-tasks) OR — in existing-parent mode — CREATES ONLY sub-tasks under an existing Story/Task/Bug key (never modifies that parent); LINKS an existing epic (opt-in, confirmed at Gate-P); creates a new epic ONLY with --create-epic; NEVER deletes, transitions, edits, or reassigns any JIRA entity
 ---
 # /author-ticket "<free-text idea>"
 
@@ -31,6 +31,20 @@ product-intake-agent          (1/8  idea-intake)        restate the idea + captu
   → handoff                   (8/8)                      "Created <PARENT-KEY> (+ N sub-tasks) on board <B>. Developer: run /implement on a leaf — <sub-keys>."
 ```
 Every step banners per [`agent-attribution`](../rules/agent-attribution.md): `### ▸ [N/8] <name>` on line 1, italic action on line 2.
+
+**In existing-parent mode** (argument is a Story key / `--parent <KEY>`): step 1 instead **reads + verifies the existing issue** (read-only) and captures its project/type/component; steps 3–4 draft only the sub-tasks (no parent draft/type-classification); step 7 `jira-writer-agent` creates **only the sub-tasks** under `<KEY>` and never touches the parent. Steps 2 (route each sub-task), 5 (completeness), and Gate-P are unchanged.
+
+## Two modes: new parent, or sub-tasks under an existing Story
+`/author-ticket` accepts **either** a free-text idea **or** an existing JIRA issue key:
+
+- **New-parent mode (default)** — argument is free text (e.g. `/author-ticket "let shippers see FRLC charges"`). The AI classifies + creates a **new** parent (`Story|Task|Bug`) and the user-listed sub-tasks under it.
+- **Existing-parent mode** — argument is an existing **Story/Task/Bug key** (e.g. `/author-ticket EFP-1234`), or `--parent EFP-1234` alongside a free-text note. Use this when a lead already created the Story and a developer wants to **break it into sub-tasks**. Here the command:
+  1. **Reads the existing issue read-only** (like `jira-agent`) — verifies it EXISTS and is a valid **sub-task container** (a `Story/Task/Bug`, NOT a `Sub-task` and NOT an `Epic`). If it's a Sub-task or Epic, it refuses with a clear message (sub-tasks can't nest under those). Captures the parent's project, type, summary, and component for context.
+  2. **Does NOT draft or create a parent** — the parent already exists. It routes + enriches only the **user-listed sub-tasks** (scoped to the parent's project), runs completeness on each, and Gate-P reviews *the sub-tasks to add under `<KEY>`*.
+  3. **`jira-writer-agent` creates ONLY the sub-tasks** with `parent=<EXISTING-KEY>`. It **never edits, transitions, reassigns, or otherwise modifies the existing parent** (`no-destructive-operations` + `jira-write-permissions`) — it only adds children.
+  4. Handoff: *"Added N sub-tasks under `<KEY>`. Developer: run /implement on a leaf — `<sub-keys>`."*
+
+  The task-history record is keyed by the existing `<KEY>` (appends a `## Authoring` section for the added sub-tasks). Everything else — routing, enrichment, Gate-P, no-invented-sub-tasks — is identical to new-parent mode.
 
 ## Hierarchical authoring (parent + sub-tasks in one flow)
 - **User-driven by default.** You list the sub-tasks; the AI routes + drafts each so it is `/implement`-ready. The AI NEVER fabricates a sub-task — unknowns inside one become `TBD — <question>` for you to fill at Gate-P (`no-invented-facts`).
@@ -63,7 +77,10 @@ Per [`human-approval-gates`](../rules/human-approval-gates.md). The user sees th
 
 ## Outputs
 - `<product>-ai-brain/task-history/<PARENT-KEY>.md` with a `## Authoring` section (idea, per-node routing, tree draft, Gate-P decision, project/board/component, epic, sub-task keys) — the SAME file `/implement` later appends to. Pre-key the record lives at `task-history/_drafts/<slug>.md` and is renamed to `<PARENT-KEY>.md` on create.
-- On `approve` + create: one new JIRA **tree** — a parent (`Story|Task|Bug`) + one `Sub-task` per approved sub-task (`parent=<PARENT-KEY>`), optionally linked to an existing epic (or a new epic under `--create-epic`), all with the resolved fields. On copy-paste mode: the formatted tree text, no JIRA write.
+- On `approve` + create:
+  - **new-parent mode:** one new JIRA **tree** — a parent (`Story|Task|Bug`) + one `Sub-task` per approved sub-task (`parent=<PARENT-KEY>`), optionally linked to an existing epic (or a new epic under `--create-epic`), all with the resolved fields.
+  - **existing-parent mode:** only the approved `Sub-task`s, each with `parent=<EXISTING-KEY>`. The existing parent is **not modified** in any way.
+  - On copy-paste mode: the formatted text, no JIRA write.
 
 ## Quality gates
 - The drafted tree MUST pass `ticket-completeness` (step 5) before Gate-P — same rule `/implement` refuses without. **Every user-listed sub-task must be leaf-ready** (problem + ≥1 AC, + repro if it's a bug); the parent needs problem + ≥1 AC. The composer never fabricates acceptance criteria and never invents sub-tasks; gaps are surfaced as `TBD` for the user to fill (`no-invented-facts`).

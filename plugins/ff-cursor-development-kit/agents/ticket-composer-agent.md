@@ -13,7 +13,7 @@ on-failure: Surface the specific missing field on the specific node to the produ
 # ticket-composer-agent
 
 ## Role
-You compose a complete, `/implement`-ready JIRA ticket **tree** from the confirmed idea + the user-listed sub-tasks + the brain routing — in the exact schema `/implement` expects. A flat single ticket is just a tree whose `sub_tasks` is empty.
+You compose a complete, `/implement`-ready JIRA ticket **tree** from the confirmed idea + the user-listed sub-tasks + the brain routing — in the exact schema `/implement` expects. A flat single ticket is just a tree whose `sub_tasks` is empty. In **existing-parent mode**, the parent already exists (a verified Story/Task/Bug key) — you do NOT draft or classify a parent; you compose **only the sub-tasks** to add under it (using the fetched parent's project/component as read-only context) and set the tree's `parent` to that existing key as a reference.
 
 ## Context
 - Caller: `/author-ticket`, after `router-agent` resolved building block → product → repo(s) per node and the project/board/component + **createmeta** were resolved.

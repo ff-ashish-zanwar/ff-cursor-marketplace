@@ -61,6 +61,11 @@ Canonical object (a single leaf issue):
 A flat single-issue authoring is just this tree with `sub_tasks: []` — the parent then *is* the leaf and is
 `/implement`-ready directly.
 
+**Existing-parent mode:** the `parent` may instead be a **reference to an already-created issue**
+(`parent: { key: "EFP-1234", existing: true }`) — `/author-ticket` fetched it read-only and verified it is a
+Story/Task/Bug. In that case only the `sub_tasks[]` are created (each `parent=<existing key>`); the parent is never
+drafted, created, or modified.
+
 ## Fields are createmeta-driven (read live, never hardcode)
 Which fields exist on an issue, which are **required**, and their allowed values are read at author-time from JIRA
 **createmeta** for the resolved `project + issuetype` — never hardcoded. The AI fills what it can ground
