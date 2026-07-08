@@ -14,13 +14,17 @@ edit the engine.
 
 ```
 Freightify-AI-{{PRODUCT}}-Workspace/
-├── ai-platform/freightify-ai-workflow/   ← the engine (product-agnostic; you consume it via the plugin, don't edit it)
+├── ai-platform/                           ← placeholder for product-agnostic tooling (the engine arrives via the plugin)
 ├── {{PRODUCT}}-Repos/                     ← your world
 │   ├── <{{PRODUCT}} service repos…>       ← the code you actually change
 │   ├── {{product}}-ai-brain/              ← the {{PRODUCT}} "map": every service + how they connect (routing + blast radius)
 │   └── shared-ai-brain/                   ← services shared across products (documented once)
+├── config/git-branch.json                 ← base branch per repo (seeded by /start; you maintain it)
+├── README.md                              ← the static pointer that sent you here
 └── getting-started.md                     ← you are here
 ```
+
+`/start` creates this skeleton for you (folders + this guide — it never clones repos; the clones below are yours to run).
 
 The **brain** is what makes the AI {{PRODUCT}}-smart: it's a map/index, not a copy of the code. The AI reads it to
 figure out *which* repo and component a change belongs to, and *what else* a shared-service change might affect.
@@ -29,13 +33,19 @@ figure out *which* repo and component a change belongs to, and *what else* a sha
 
 1. **Install the plugin** — `ff-cursor-development-kit` from the ff-cursor marketplace, in Cursor / Claude Code.
    This is how you get every command (`/start`, `/author-ticket`, `/implement`, …). *You do not clone the engine.*
-2. **Clone the two brains** into `{{PRODUCT}}-Repos/`, alongside your service repos:
-   `{{product}}-ai-brain` and `shared-ai-brain`.
+2. **Clone the two brains** into `{{PRODUCT}}-Repos/`:
+   ```sh
+   cd {{PRODUCT}}-Repos
+   git clone https://gitlab.freightify.in/ff-ai/{{product}}-ai-brain.git
+   git clone https://gitlab.freightify.in/ff-ai/shared-ai-brain.git
+   ```
+   (They check out on `development` automatically — it's the repos' default branch.)
+   Then clone the {{PRODUCT}} service repos you work on, alongside them.
 3. **Give the AI JIRA access — pick ONE:**
    - **(a) Connect the Atlassian MCP directly in your IDE** *(recommended)* — once it's connected there's no token to
      manage; the AI reads and creates JIRA tickets straight through it.
    - **(b) OR set local JIRA credentials** — `JIRA_API_TOKEN`, `JIRA_EMAIL`, `JIRA_BASE_URL` as env vars (used only if
-     the Atlassian MCP isn't connected). See `ai-platform/freightify-ai-workflow/jira-integration/auth-and-secrets.md`.
+     the Atlassian MCP isn't connected). Details: ask the AI for `auth-and-secrets` (ships with the plugin).
 
 That's it — the AI **auto-detects** you're the **{{PRODUCT}}** team from this folder. Nothing else to configure.
 
@@ -43,7 +53,11 @@ That's it — the AI **auto-detects** you're the **{{PRODUCT}}** team from this 
 
 You're reading this because you ran **`/start`** (or you're about to — the root `README.md` points here). `/start`:
 
-- **detects your product** from this workspace ({{PRODUCT}}) and **generates this `getting-started.md`** for it;
+- **detects your product** from the workspace folder name (`Freightify-AI-{{PRODUCT}}-Workspace`) — it works even in a
+  brand-new, empty folder;
+- **scaffolds the workspace skeleton** (`ai-platform/`, `{{PRODUCT}}-Repos/`, `config/`, `README.md`) — creating only
+  what's missing, never touching what exists, and never running git;
+- **generates this `getting-started.md`** for {{PRODUCT}};
 - **prints a one-screen orientation** — the two front doors, the flow, and the setup checklist;
 - is safe to **re-run any time** — it refreshes this guide to the current command set (and seeds `config/git-branch.json`
   the first time, if it's missing). It never touches JIRA.
@@ -119,13 +133,14 @@ You'll mostly live in the two front doors, but these help along the way:
 | `/review-ui <screen>` | You want a UI review of a frontend screen. |
 | `/sync-repos` | Pull the latest base branch across all your service repos in one shot (branch per repo from `config/git-branch.json`). |
 
-Full command list, every flag, and the reply tokens for the approval gates:
-**`ai-platform/freightify-ai-workflow/commands/command-flags.md`**.
+Full command list, every flag, and the reply tokens for the approval gates: ask the AI for **`command-flags`**
+(it ships with the plugin).
 
 ## 6. Good to know
 
-- **You never edit the engine.** `ai-platform/freightify-ai-workflow/` is product-agnostic tooling delivered through
-  the plugin. Your changes live in your service repos under `{{PRODUCT}}-Repos/`.
+- **You never edit the engine.** The engine (commands, agents, skills, rules) is delivered through the plugin —
+  `ai-platform/` in your workspace is just a placeholder for it. Your changes live in your service repos under
+  `{{PRODUCT}}-Repos/`.
 - **You stay in control of git.** The pipeline creates a feature branch and writes code, but never stages, commits,
   or pushes. That's always your call, after the final review gate.
 - **The AI won't invent facts.** If a ticket is missing acceptance criteria or a routing target is unclear, it asks
@@ -136,8 +151,8 @@ Full command list, every flag, and the reply tokens for the approval gates:
 ## 7. Where to go deeper
 
 - **Live orientation:** `/start` (run it in the IDE).
-- **All commands + flags:** `ai-platform/freightify-ai-workflow/commands/command-flags.md`.
-- **The product flow, end to end:** `ai-platform/freightify-ai-workflow/jira-integration/product-flow.md`.
+- **All commands + flags:** ask the AI for `command-flags` (ships with the plugin).
+- **The product flow, end to end:** ask the AI for `product-flow` (ships with the plugin).
 - **Not sure where a change belongs?** `/route "<your question>"`.
 
 ---
