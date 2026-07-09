@@ -25,6 +25,12 @@ Gate 2's prompt to the developer is fixed:
 
 > All 14 review agents have posted their findings as a consolidated comment on `<JIRA-KEY>`. Please review the JIRA comment first, then reply `approve` — or just tell me what to change and I'll redo the relevant step (no need to type "revise") / `reject`. On approve, the changes remain uncommitted — you stage, commit, and push them yourself.
 
+**Blocker-aware variant** — when ≥1 Blocker finding is open, Gate 2 uses this prompt instead (**Blockers are advisory; they inform the developer, they never block them**):
+
+> ⚠ `<N>` **Blocker finding(s)** are open — see the consolidated comment on `<JIRA-KEY>`. Your call: reply `approve` to **go ahead anyway** (I'll record *approved with `<N>` open Blockers* in the task-history and the completion panel), or tell me what to fix and I'll redo the coding step, or `reject`. On approve, the changes remain uncommitted — you stage, commit, and push them yourself.
+
+Approving with open Blockers is always allowed and always **recorded, never hidden**: the task-history `## Approvals` entry and the completion panel's Review-result row both carry *approved with `<N>` open Blockers*, so the eventual MR reviewer sees exactly what was waived.
+
 Each gate resolves to one of three outcomes — **approve**, **revise**, or **reject** — but the developer is **not required to type those exact words** (see "Interpreting the reply" below). Gate 1 additionally accepts per-repo base overrides in the same reply.
 
 ## Interpreting the reply — by intent, not keyword

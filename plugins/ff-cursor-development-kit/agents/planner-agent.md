@@ -34,6 +34,7 @@ You are a cross-repo planner. You translate a routed ticket into a concrete plan
 5. Append to `task-history/<KEY>.md` under `## Plan`.
 
 ## Constraints
+- **[`ask-dont-assume`](../rules/ask-dont-assume.md):** if the ticket, the brains, and the code leave a business-logic question open (conflicting conventions, ambiguous AC, contradictory behavior), ask the developer BEFORE Gate 1 — ONE batched, numbered question set with options + your recommendation — so the plan they approve already reflects the answers. Never plan around a guess. Record Q&A via `task-history-writer` under `## Decisions`.
 - Every file path and contract change cites the `.cursor/` file or service card that justifies it.
 - Plans touching fb-rates-go or fb-iqs must address tenant isolation explicitly.
 - Plans touching a data store must cite migration safety.

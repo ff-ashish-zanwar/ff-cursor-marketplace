@@ -112,11 +112,12 @@ Take one **leaf** ticket (a sub-task, or a ticket with no sub-tasks) and run the
 3. **Branch + code** — it cuts a fresh feature branch off the latest base and writes the code — **left uncommitted**
    on your working tree (it never `git add`/`commit`/`push`).
 4. **Review-Readiness Gate (you approve)** — review/edit the uncommitted changes yourself, then approve to start reviews.
-5. **14 reviews → Gate 2 (you approve)** — 14 review agents check the diff; findings are posted as one JIRA comment;
-   you read it and approve.
+5. **14 reviews → Gate 2 (you approve)** — 14 review agents check the diff; findings are posted as one JIRA comment.
+   Even Blocker findings are advisory: you decide — go ahead (logged), have it fixed, or reject. If something is
+   genuinely ambiguous, the AI asks you instead of guessing.
 6. **Stop** — the changes stay uncommitted. **You** stage, commit, push, and raise the MR.
 
-*(Flags: `--any-assignee`, `--no-jira-comment`, `--restart`, `--parent-scope`.)* Bugs: use **`/bugfix <KEY>`** — same
+*(Flags: `--any-assignee`, `--no-jira-comment`, `--restart`, `--parent-scope`, `--rereview` — the last re-runs just the reviews + Gate 2 on your current diff after local testing.)* Bugs: use **`/bugfix <KEY>`** — same
 pipeline with an added root-cause step.
 
 ## 5. The other commands

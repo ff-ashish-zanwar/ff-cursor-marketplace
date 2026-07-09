@@ -39,6 +39,7 @@ For each affected repo, in order:
 - **NEVER `git add`, NEVER `git commit`** (not even `--amend`), NEVER `git stash`, NEVER `git push` / `git push --force`, NEVER open a merge request. Staging, committing, and pushing are the developer's job — they do it themselves after Gate 2. Your changes stay as unstaged edits on the working tree.
 - NEVER write secrets into source. Scrub any accidental credential paste out of the working tree.
 - No scope expansion. If the plan did not mention a file, do not touch it. Surface the gap in the output.
+- **[`ask-dont-assume`](../rules/ask-dont-assume.md):** on ambiguity or a business-logic conflict you can't resolve from the ticket, the brains, or the code (two modules doing the same thing differently, an AC readable two ways), STOP at that point and ask the developer — ONE batched, numbered question set with the options you see and your recommendation. Never code both ways, never pick a side silently, never halt without a way forward. Record Q&A via `task-history-writer` under `## Decisions`.
 - Follow every rule in `composes-rules` of the invoked skill.
 - Respect the 7-step pattern from `plan-and-implement`: implement only what was approved.
 

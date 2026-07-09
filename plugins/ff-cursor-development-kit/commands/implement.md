@@ -2,7 +2,7 @@
 name: implement
 description: Primary entry point
 command: /implement
-arguments: <JIRA-KEY> [--any-assignee] [--no-jira-comment] [--restart] [--parent-scope]
+arguments: <JIRA-KEY> [--any-assignee] [--no-jira-comment] [--restart] [--parent-scope] [--rereview]
 category: primary
 on-demand: true
 side-effects: writes task-history/<KEY>.md; creates feature branches on affected repos; leaves uncommitted changes on those branches (never stages, never commits, never pushes)
@@ -23,6 +23,15 @@ Primary entry point. Runs the full pipeline up to **uncommitted** changes on dev
 - **Story/Task with sub-tasks** → **HALT with a guided redirect**: `jira-agent` lists the children and asks you to `run /implement on one of: <child keys>`. This is a helpful redirect, not a refusal — the parent is a container, its sub-tasks are the leaves.
 - **`--parent-scope`** (escape hatch) → implement the container parent's *own* description, ignoring its children. Use when the parent itself carries the code-level work.
 - `--all-subtasks` (fan out one run per child) is reserved for a future release and is not yet executed.
+
+## Re-review mode — `--rereview` (post-run developer changes)
+After a completed run the developer typically tests locally and edits the working tree themselves. `/implement <KEY> --rereview` folds those changes in **without re-planning or re-coding**:
+1. Verifies a prior run exists for `<KEY>` (task-history present) and that the feature branch(es) still carry changes vs `origin/<base>`.
+2. Skips jira/completeness/router/planner/Gate 1/base-branch-picker/coder entirely.
+3. Goes straight to the **Review-Readiness Gate** — the developer confirms the *now-current* diff (their local edits included).
+4. Runs all 14 review agents on the **current uncommitted working-tree diff**, aggregates, posts ONE fresh consolidated JIRA comment, then **Gate 2** as normal (blocker-aware; still advisory).
+5. Appends `## Run N` to the SAME task-history file (`run-count` increments) — never a second file.
+Use it any time before raising the MR — after local testing, after addressing review findings by hand, or after rebasing.
 
 ## Pipeline
 ```
@@ -83,7 +92,7 @@ The `/implement` orchestrator — not the individual reviewers — performs this
 4. Banner `### ▸ [10/12] review-aggregator` / `*posting consolidated findings to JIRA-<KEY>*`, then once posted, banner `### ▸ [11/12] Gate 2` / `*waiting for your approval (review the consolidated JIRA comment first)*`.
 5. Emit the Gate 2 prompt verbatim per [`human-approval-gates`](../rules/human-approval-gates.md).
 
-If any reviewer returns a **Blocker**, the orchestrator still posts the consolidated comment (so the developer has a record), but halts before Gate 2 with the heading banner `### ▸ [10/12] review-aggregator` / `*HALT before Gate 2: <N> Blocker finding(s) — see JIRA-<KEY>*`. The developer fixes the uncommitted working tree on the feature branch and re-runs.
+If any reviewer returns a **Blocker**, the orchestrator still posts the consolidated comment and then **proceeds to Gate 2 — Blockers are advisory, never a hard halt**. The banner reads `### ▸ [10/12] review-aggregator` / `*<N> Blocker finding(s) — your call at Gate 2 — see JIRA-<KEY>*`, and Gate 2 uses its blocker-aware prompt (`human-approval-gates`): the developer may **go ahead anyway** (`approve` — recorded as *approved with N open Blockers* in the task-history `## Approvals` and in the completion panel's Review-result row, so MR reviewers see it too), have the coder fix them (plain feedback / `revise`), or `reject`.
 
 ## Required skills
 `jira-ticket-parser`, `building-block-router`, `plan-and-implement`, `go-gin-api-authoring` / `node-ts-express-authoring` / `python-fastapi-authoring` (as needed), `mongo-schema-change` / `mysql-schema-change` / `datastore-kind-change` (as needed), `event-contract-authoring`, `proxy-integration`, `base-branch-picker`, `task-history-writer`.
@@ -102,7 +111,8 @@ If any reviewer returns a **Blocker**, the orchestrator still posts the consolid
 - No review agent may run until the developer approves the Review-Readiness Gate. All 14 review agents MUST then run before Gate 2 — none may be skipped. They review the **uncommitted working-tree diff** (`git diff origin/<base>`). The orchestrator MUST aggregate their findings into one JIRA comment and post it before emitting the Gate 2 prompt (`human-approval-gates`).
 - Review agents return findings to the orchestrator only; they do not call the JIRA API themselves (`jira-write-permissions`).
 - Every agent banners per `agent-attribution` so the developer can see which agent is acting at every step.
-- If any review agent returns a Blocker finding, the pipeline halts before Gate 2. The uncommitted changes stay on the feature branch's working tree; the developer fixes in place and re-runs.
+- **Blocker findings are advisory, never a hard halt**: the pipeline always proceeds to Gate 2 and the developer decides — go ahead (logged as *approved with N open Blockers*), fix via revise, or reject.
+- **Ask, don't assume** (`ask-dont-assume`): when the planner, coder, or a reviewer hits ambiguity or a business-logic conflict it cannot resolve from the ticket, the brains, or the code, it batches its questions into ONE set and asks the developer — it neither guesses nor silently halts. Answers are recorded in the task-history `## Decisions` section, feeding `/brain-refresh`.
 - **Post-Gate-2 finalize**: when the developer approves Gate 2, the orchestrator MUST (1) call `task-history-writer` with phase `gate-2` to append the final section to `<product>-ai-brain/task-history/<KEY>.md` **and set `published: false`**, (2) verify the file exists with `last-phase: gate-2` stamped, (3) emit the completion panel per `pipeline-checklist` **including the Step-13 publish reminder**. The run does not end until all three are done. The changes remain uncommitted, and the task-history is **not pushed** — the panel tells the developer to stage/commit/push the code, and to run `/publish-history` when ready. See `human-approval-gates` constraints.
 
 ## Completion panel (after Gate 2 approve)

@@ -1,0 +1,48 @@
+---
+name: ask-dont-assume
+description: When an agent cannot resolve something from its three legitimate sources — the JIRA ticket, the brains, and the
+when-to-apply: whenever planner-agent, coder-agent, rca-agent, or any of the 14 review agents hits ambiguity, a contradiction, or a business-logic conflict it cannot resolve from the ticket, the brains, or the code itself
+globs: "**/*"
+severity: high
+linked-rules: [no-invented-facts.md, human-approval-gates.md]
+---
+# Ask, don't assume — questions over guesses, questions over halts
+
+## Rule
+When an agent cannot resolve something from its three legitimate sources — the JIRA ticket, the brains, and the
+code — it must **ask the developer**, not guess and not silently halt. This applies especially to **business-logic
+conflicts**: two modules doing the same thing differently, a ticket contradicting existing behavior, an AC that can
+be read two ways, a review finding that hinges on intent rather than correctness.
+
+## How
+1. **Batch, don't drip.** The agent collects everything unresolved in its step and asks **ONE consolidated question
+   set** (numbered, each with the concrete options it sees and — when it has one — its recommended answer). Never a
+   string of one-off interruptions.
+2. **Ask at the right moment.** planner-agent asks before Gate 1 (so the plan the developer approves already
+   reflects the answers); coder-agent asks the moment it hits the conflict, before writing code both ways; review
+   agents route intent-dependent findings through the orchestrator, which surfaces them as questions alongside the
+   Gate 2 prompt rather than as verdicts.
+3. **Wait.** The step does not proceed past the unresolved point until the developer answers. Unanswered = still
+   ambiguous; the pipeline never resolves ambiguity by picking a side.
+4. **Record.** Every question + the developer's answer is written to the task-history under `## Decisions`
+   (question, options considered, developer's answer, verbatim) via `task-history-writer`. Like `## Corrections`,
+   this feeds `/brain-refresh` — a resolved ambiguity becomes tomorrow's brain knowledge instead of next month's
+   repeated question.
+
+## Distinction from neighbors
+- **`no-invented-facts`** covers facts that have a findable answer (mark `TBD`, cite the gap). This rule covers
+  judgment calls that only a human can settle *now*, mid-run.
+- **`human-approval-gates`** covers the fixed gates. This rule covers questions that arise *between* gates — it
+  never replaces a gate, and a question is never an approval.
+
+## Good / Bad
+- **Good:** "The pricing-model export uses `keyword`/`domain` fields but the other two exports use
+  `filter`/`filters`. 1) Align pricing-model to `filter`/`filters` (recommended — matches the module convention), or
+  2) keep as-is for backward compatibility?"
+- **Bad:** picking option 1 silently because it "seems consistent" — or halting the run with "asymmetric fields
+  detected" and no way forward.
+
+## Why
+Guessing wrong on business logic costs a full revise cycle (or ships a defect); halting costs the whole run. A
+batched question costs the developer thirty seconds and is captured forever in the task-history. The developer is
+sitting right there — the pipeline is on-demand and interactive by design. Use them.
