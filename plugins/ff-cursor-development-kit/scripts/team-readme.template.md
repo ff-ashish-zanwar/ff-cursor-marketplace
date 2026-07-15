@@ -13,10 +13,11 @@ Open this folder in Cursor / Claude Code and run:
 ```
 
 `/start` detects which product this workspace is for (**EFP / RMS / ATLAS** — from the folder name, so it works in a
-brand-new empty folder), **scaffolds the workspace skeleton** (`ai-platform/`, `<PRODUCT>-Repos/`, `config/`), and
-generates a full, product-specific **`getting-started.md`** right here at the workspace root. Open that file next —
-it has the one-time setup (including the exact `git clone` commands for the brains), the two front doors
-(`/author-ticket` and `/implement`), and the full command list.
+brand-new empty folder), **scaffolds the workspace skeleton** (`config/`, this README, your generated guide), and
+generates a full, product-specific **`getting-started.md`** right here at the workspace root. All repos — service
+repos and the two brains — are cloned flat at this root. Open the guide next — it has the one-time setup
+(including the exact `git clone` commands), the two front doors (`/author-ticket` and `/implement`), and the full
+command list.
 
 That's the only thing you need to do to get going. Re-run `/start` any time to refresh the guide.
 

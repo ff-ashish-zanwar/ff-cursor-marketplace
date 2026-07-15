@@ -14,17 +14,17 @@ edit the engine.
 
 ```
 Freightify-AI-{{PRODUCT}}-Workspace/
-├── ai-platform/                           ← placeholder for product-agnostic tooling (the engine arrives via the plugin)
-├── {{PRODUCT}}-Repos/                     ← your world
-│   ├── <{{PRODUCT}} service repos…>       ← the code you actually change
-│   ├── {{product}}-ai-brain/              ← the {{PRODUCT}} "map": every service + how they connect (routing + blast radius)
-│   └── shared-ai-brain/                   ← services shared across products (documented once)
+├── <{{PRODUCT}} service repos…>           ← the code you actually change — cloned directly here at the root
+├── {{product}}-ai-brain/                  ← the {{PRODUCT}} "map": every service + how they connect (routing + blast radius)
+├── shared-ai-brain/                       ← services shared across products (documented once)
 ├── config/git-branch.json                 ← base branch per repo (seeded by /start; you maintain it)
 ├── README.md                              ← the static pointer that sent you here
 └── getting-started.md                     ← you are here
 ```
 
-`/start` creates this skeleton for you (folders + this guide — it never clones repos; the clones below are yours to run).
+Everything lives flat at the workspace root — repos, brains, config. No nested folders, no engine clone (the
+engine reaches you through the plugin). `/start` creates the skeleton (`config/`, README, this guide — it never
+clones repos; the clones below are yours to run).
 
 The **brain** is what makes the AI {{PRODUCT}}-smart: it's a map/index, not a copy of the code. The AI reads it to
 figure out *which* repo and component a change belongs to, and *what else* a shared-service change might affect.
@@ -33,14 +33,14 @@ figure out *which* repo and component a change belongs to, and *what else* a sha
 
 1. **Install the plugin** — `ff-cursor-development-kit` from the ff-cursor marketplace, in Cursor / Claude Code.
    This is how you get every command (`/start`, `/author-ticket`, `/implement`, …). *You do not clone the engine.*
-2. **Clone the two brains** into `{{PRODUCT}}-Repos/`:
+2. **Clone the two brains** at the workspace root (this folder):
    ```sh
-   cd {{PRODUCT}}-Repos
+   cd Freightify-AI-{{PRODUCT}}-Workspace
    git clone https://gitlab.freightify.in/ff-ai/{{product}}-ai-brain.git
    git clone https://gitlab.freightify.in/ff-ai/shared-ai-brain.git
    ```
    (They check out on `development` automatically — it's the repos' default branch.)
-   Then clone the {{PRODUCT}} service repos you work on, alongside them.
+   Then clone the {{PRODUCT}} service repos you work on, alongside them — also at the root.
 3. **Give the AI JIRA access — pick ONE:**
    - **(a) Connect the Atlassian MCP directly in your IDE** *(recommended)* — once it's connected there's no token to
      manage; the AI reads and creates JIRA tickets straight through it.
@@ -55,8 +55,8 @@ You're reading this because you ran **`/start`** (or you're about to — the roo
 
 - **detects your product** from the workspace folder name (`Freightify-AI-{{PRODUCT}}-Workspace`) — it works even in a
   brand-new, empty folder;
-- **scaffolds the workspace skeleton** (`ai-platform/`, `{{PRODUCT}}-Repos/`, `config/`, `README.md`) — creating only
-  what's missing, never touching what exists, and never running git;
+- **scaffolds the workspace skeleton** (`config/`, `README.md`) — creating only what's missing, never touching
+  what exists, and never running git;
 - **generates this `getting-started.md`** for {{PRODUCT}};
 - **prints a one-screen orientation** — the two front doors, the flow, and the setup checklist;
 - is safe to **re-run any time** — it refreshes this guide to the current command set (and seeds `config/git-branch.json`
@@ -140,8 +140,7 @@ Full command list, every flag, and the reply tokens for the approval gates: ask 
 ## 6. Good to know
 
 - **You never edit the engine.** The engine (commands, agents, skills, rules) is delivered through the plugin —
-  `ai-platform/` in your workspace is just a placeholder for it. Your changes live in your service repos under
-  `{{PRODUCT}}-Repos/`.
+  there is no engine folder in your workspace at all. Your changes live in your service repos at the workspace root.
 - **You stay in control of git.** The pipeline creates a feature branch and writes code, but never stages, commits,
   or pushes. That's always your call, after the final review gate.
 - **The AI won't invent facts.** If a ticket is missing acceptance criteria or a routing target is unclear, it asks

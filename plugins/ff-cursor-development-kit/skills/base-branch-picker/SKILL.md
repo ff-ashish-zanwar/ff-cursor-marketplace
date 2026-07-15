@@ -6,7 +6,7 @@ inherits: plan-and-implement
 composes-rules: [base-branch-selection, human-approval-gates, no-invented-facts]
 when-to-invoke: Consumed by `base-branch-picker-agent` immediately after Gate 1 approves the plan, before the coder-agent writes any code
 sources:
-  - freightify-ai-workflow/walkthrough-findings.md
+  - freightify-ai-workflow/docs/walkthrough-findings.md
 ---
 # base-branch-picker
 

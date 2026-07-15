@@ -5,7 +5,7 @@ scope: workspace-universal (pipeline)
 when-to-apply: Immediately after Gate 1 passes in `/implement` or `/bugfix`, before the coder-agent runs
 globs: []
 linked-knowledge-base-files:
-  - freightify-ai-workflow/walkthrough-findings.md
+  - freightify-ai-workflow/docs/walkthrough-findings.md
 ---
 # Base branch selection
 

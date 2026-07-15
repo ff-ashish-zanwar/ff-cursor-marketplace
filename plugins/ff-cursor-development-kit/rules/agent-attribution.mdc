@@ -5,7 +5,7 @@ scope: workspace-universal (pipeline output)
 when-to-apply: Every agent invocation that emits chat output during `/implement`, `/bugfix`, `/plan`, `/triage`, `/route`, `/db-impact`
 globs: []
 linked-knowledge-base-files:
-  - freightify-ai-workflow/dependency-map.md
+  - freightify-ai-workflow/docs/dependency-map.md
 ---
 # Agent attribution
 

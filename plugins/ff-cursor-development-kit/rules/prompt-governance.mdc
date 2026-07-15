@@ -5,7 +5,7 @@ scope: workspace-universal (AI workflow)
 when-to-apply: Any downstream sub-agent prompt, planner prompt, or developer-visible AI output
 globs: ["freightify-ai-workflow/agents/**/*.md", "freightify-ai-workflow/skills/**/*.md", "**/prompts/**/*.py", "**/prompts/**/*.ts", "**/prompt.py", "**/prompts.py"]
 linked-knowledge-base-files:
-  - freightify-ai-workflow/walkthrough-findings.md
+  - freightify-ai-workflow/docs/walkthrough-findings.md
   - rate-agent/.cursor/service-knowledge-base/coding-guidelines.md
   - qa-agent/.cursor/service-knowledge-base/coding-guidelines.md
 ---

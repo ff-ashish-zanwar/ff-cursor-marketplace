@@ -70,7 +70,7 @@ No paraphrasing, no "but I can do X instead" follow-up unless the developer asks
 > Agent edits a comment a human PM wrote two weeks ago to "fix a typo."
 
 ## Related
-- Rules: `no-destructive-operations` (master data-preservation rule — DB + JIRA + GitLab). Doc: `SAFEGUARDS.md`.
+- Rules: `no-destructive-operations` (master data-preservation rule — DB + JIRA + GitLab). Doc: `docs/SAFEGUARDS.md`.
 - Agents: every agent. Specifically gating: `jira-agent`, `ticket-completeness-agent`, the 14 review agents, and `jira-writer-agent` (the only sanctioned issue-creator).
 - Commands: `/implement`, `/bugfix`, `/plan`, `/triage`, `/route`, `/db-impact`, `/author-ticket`.
 - Rules: `human-approval-gates` (Gate 2 trigger depends on the orchestrator's consolidated comment landing), `secrets-management`.

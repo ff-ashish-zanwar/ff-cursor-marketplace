@@ -6,7 +6,7 @@ when-to-apply: Every `/implement` and `/bugfix` run
 globs: []
 linked-knowledge-base-files:
   - freightify-web/.cursor/skills/
-  - freightify-ai-workflow/walkthrough-findings.md
+  - freightify-ai-workflow/docs/walkthrough-findings.md
 ---
 # Human approval gates
 

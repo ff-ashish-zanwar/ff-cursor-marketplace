@@ -8,7 +8,7 @@ sources:
   - freightify-web/.cursor/skills/feature-development/SKILL.md
   - freightify-web/.cursor/skills/bug-fix/SKILL.md
   - freightify-web/.cursor/skills/module-development/SKILL.md
-  - freightify-ai-workflow/walkthrough-findings.md
+  - freightify-ai-workflow/docs/walkthrough-findings.md
 ---
 # plan-and-implement
 

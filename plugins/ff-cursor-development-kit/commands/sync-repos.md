@@ -5,7 +5,7 @@ command: /sync-repos
 arguments: none (optional --workspace <path>, --dry-run)
 category: workspace
 on-demand: true
-side-effects: checks out each repo's configured base branch and runs `git pull --ff-only` in every product repo; discards stray .DS_Store files; never commits, stashes, force-resets, or touches AI brains
+side-effects: checks out each repo's configured base branch and runs `git pull --ff-only` in every product repo; discards stray .DS_Store files; never commits, stashes, force-resets, or touches AI brains / tooling repos. Auto-detects the workspace layout: flat V2 root, admin container (Freightify-AI-*-Workspace children), or legacy V1 *-Repos folders
 ---
 # /sync-repos
 

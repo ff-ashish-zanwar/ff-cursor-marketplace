@@ -2,8 +2,15 @@
 #
 # sync-repos.sh — pull the latest base branch on every product repo in one shot.
 #
-# For each repo under every <Product>-Repos/ folder in the workspace:
-#   1. Skip AI brains (names matching *ai-brain* or *ai-knowledge-base*).
+# Supports BOTH workspace layouts:
+#   • FLAT (canonical since 2026-07-09): repos cloned directly at the workspace
+#     root (Freightify-AI-<PRODUCT>-Workspace/<repo>/ …), next to config/ and
+#     getting-started.md.
+#   • NESTED (legacy/admin): repos under <Product>-Repos/ folders.
+#
+# For each repo found:
+#   1. Skip AI brains (names matching *ai-brain* or *ai-knowledge-base*) and
+#      engine/tooling repos (freightify-ai-workflow, ff-cursor-marketplace).
 #   2. If the only working-tree change is a stray .DS_Store, discard it.
 #   3. Pick the base branch:
 #        a. If the repo is listed in config/git-branch.json → use that branch.
@@ -56,8 +63,12 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# ---- locate the workspace root (the dir that holds the *-Repos folders) ------
+# ---- locate the workspace root ------------------------------------------------
+# A workspace root is EITHER a dir holding *-Repos folders (nested/legacy layout)
+# OR a flat workspace root: has config/git-branch.json or a *-ai-brain clone.
 has_repos_folders() { compgen -G "$1/*-Repos" >/dev/null 2>&1; }
+is_flat_workspace() { [ -f "$1/config/git-branch.json" ] || compgen -G "$1/*-ai-brain" >/dev/null 2>&1; }
+is_workspace_root() { has_repos_folders "$1" || is_flat_workspace "$1"; }
 
 find_workspace() {
   local d
@@ -66,20 +77,20 @@ find_workspace() {
   # 2) walk up from the current working directory
   d="$PWD"
   while [ "$d" != "/" ]; do
-    has_repos_folders "$d" && { echo "$d"; return; }
+    is_workspace_root "$d" && { echo "$d"; return; }
     d="$(dirname "$d")"
   done
   # 3) walk up from this script's own location
   d="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   while [ "$d" != "/" ]; do
-    has_repos_folders "$d" && { echo "$d"; return; }
+    is_workspace_root "$d" && { echo "$d"; return; }
     d="$(dirname "$d")"
   done
   return 1
 }
 
 WS="$(find_workspace)" || {
-  echo "${R}✗ Could not find any *-Repos folder.${X}"
+  echo "${R}✗ Could not find a workspace root (no *-Repos folder, config/git-branch.json, or *-ai-brain).${X}"
   echo "  Run this from inside your Freightify workspace, or pass --workspace <path>."
   exit 1
 }
@@ -142,6 +153,7 @@ SKIPPED=()  # "group|name|reason"
 EXCLUDED=() # "group|name"
 
 is_brain() { case "$1" in *ai-brain*|*ai-knowledge-base*) return 0;; *) return 1;; esac; }
+is_tooling() { case "$1" in freightify-ai-workflow|ff-cursor-marketplace|ai-platform) return 0;; *) return 1;; esac; }
 
 process_repo() {
   local dir="$1" group="$2" name; name="$(basename "$dir")"
@@ -223,16 +235,45 @@ process_repo() {
 
 # ---- main loop --------------------------------------------------------------
 shopt -s nullglob
-for repos_dir in "$WS"/*-Repos; do
-  group="$(basename "$repos_dir")"
-  echo "${B}=== $group ===${X}"
-  for d in "$repos_dir"/*/; do
+
+# Process one flat workspace dir: every top-level git repo, minus brains/tooling.
+process_flat_workspace() {
+  local root="$1" group="$2" d name
+  echo "${B}=== $group (flat layout) ===${X}"
+  for d in "$root"/*/; do
     d="${d%/}"; name="$(basename "$d")"
     if is_brain "$name"; then EXCLUDED+=("$group|$name"); continue; fi
+    if is_tooling "$name"; then EXCLUDED+=("$group|$name"); continue; fi
+    [ -e "$d/.git" ] || continue   # silently skip non-repo dirs (config/, _scratch/, …)
     process_repo "$d" "$group"
   done
   echo
-done
+}
+
+repos_groups=( "$WS"/*-Repos )
+ws_children=( "$WS"/Freightify-AI-*-Workspace )
+if [ ${#repos_groups[@]} -gt 0 ]; then
+  # V1 (nested) layout: repos under <Product>-Repos/ folders
+  for repos_dir in "${repos_groups[@]}"; do
+    group="$(basename "$repos_dir")"
+    echo "${B}=== $group ===${X}"
+    for d in "$repos_dir"/*/; do
+      d="${d%/}"; name="$(basename "$d")"
+      if is_brain "$name"; then EXCLUDED+=("$group|$name"); continue; fi
+      if is_tooling "$name"; then EXCLUDED+=("$group|$name"); continue; fi
+      process_repo "$d" "$group"
+    done
+    echo
+  done
+elif [ ${#ws_children[@]} -gt 0 ]; then
+  # V2 admin container: the root holds per-product flat workspaces
+  for child in "${ws_children[@]}"; do
+    process_flat_workspace "$child" "$(basename "$child")"
+  done
+else
+  # V2 (flat) layout: repos directly at the workspace root
+  process_flat_workspace "$WS" "$(basename "$WS")"
+fi
 
 # ---- summary ----------------------------------------------------------------
 echo "${B}──────────────────────────── SUMMARY ────────────────────────────${X}"

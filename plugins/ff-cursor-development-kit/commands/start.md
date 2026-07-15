@@ -5,7 +5,7 @@ command: /start
 arguments: (none)
 category: onboarding
 on-demand: true
-side-effects: (1) scaffolds the workspace skeleton — creates ./ai-platform/, ./<PRODUCT>-Repos/, ./config/ and the static ./README.md where missing (create-if-missing only; NO git operations; never touches existing content); (2) writes ./getting-started.md at the workspace root (product-detected; FULLY REPLACED every run); (3) seeds ./config/git-branch.json from the engine default ONLY if it does not already exist (never overwrites — it is user-maintained config). No JIRA calls.
+side-effects: (1) scaffolds the workspace skeleton — creates ./config/ and the static ./README.md where missing (create-if-missing only; NO git operations; never touches existing content); (2) writes ./getting-started.md at the workspace root (product-detected; FULLY REPLACED every run); (3) seeds ./config/git-branch.json from the engine default ONLY if it does not already exist (never overwrites — it is user-maintained config). No JIRA calls.
 ---
 # /start
 
@@ -26,29 +26,33 @@ Resolve the current product from the workspace, in order:
    `Freightify-AI-ATLAS-Workspace` → ATLAS). This is the primary rule: it works even in a **brand-new, empty
    workspace**, before anything has been cloned. (The admin mono-workspace `Freightify-AI-Workspace` carries no
    product in its name and falls through to the rules below.)
-2. The single `<product>-Repos/` folder present (e.g. `RMS-Repos/` → **RMS**) — the normal single-team case.
-3. Else the product brain cloned alongside the service repos (`<product>-ai-brain/`).
-4. If more than one product folder is present (the admin's full workspace) → list them and ask which to generate for.
+2. The product brain cloned at the workspace **root** (`<product>-ai-brain/` → that product) — layout V2, the
+   canonical flat layout: every repo sits directly at the workspace root.
+3. Legacy (layout V1) fallback: a single `<product>-Repos/` folder present (e.g. `RMS-Repos/` → **RMS**), or the
+   brain inside it.
+4. If more than one product is detected (e.g. several brains or product folders) → list them and ask which to generate for.
 
 **Never reference a product whose folder isn't present** — a team only ever sees its own product.
 
 ## What it does
 1. **Detect** `<PRODUCT>` (and `<product>` lower-case) from the workspace per the rules above.
-2. **Scaffold the skeleton (create-if-missing).** Ensure the approved per-product layout exists — create what's
-   missing, never touch what's present:
+2. **Scaffold the skeleton (create-if-missing).** Ensure the flat V2 layout exists — create what's missing,
+   never touch what's present:
    ```
-   mkdir -p ./ai-platform ./<PRODUCT>-Repos ./config
+   mkdir -p ./config
    [ -f ./README.md ] || <render scripts/team-readme.template.md → ./README.md>
    ```
-   Target shape:
+   Target shape (layout V2 — everything flat at the workspace root):
    ```
    Freightify-AI-<PRODUCT>-Workspace/
-   ├── ai-platform/          ← placeholder (the engine arrives via the plugin; cloning it here is optional/manual)
-   ├── <PRODUCT>-Repos/      ← developer clones the two brains + their service repos here
-   ├── config/               ← git-branch.json lives here (seeded in the next step)
-   ├── README.md             ← static pointer ("run /start") — seeded only if absent
-   └── getting-started.md    ← generated in the next step
+   ├── <product service repos…>   ← developer clones them directly here
+   ├── <product>-ai-brain/        ← cloned here
+   ├── shared-ai-brain/           ← cloned here
+   ├── config/                    ← git-branch.json (seeded in the next step)
+   ├── README.md                  ← static pointer ("run /start") — seeded only if absent
+   └── getting-started.md         ← generated in the next step
    ```
+   No engine folder — the engine reaches developers exclusively through the plugin.
    **No git operations** — `/start` never clones, pulls, fetches, or checks anything out. The generated guide gives
    the developer the exact `git clone` commands for the two brains and their service repos.
 3. **Generate the guide.** Render the getting-started template (`scripts/getting-started.template.md`), substituting
@@ -74,7 +78,7 @@ Resolve the current product from the workspace, in order:
 Print this, with the resolved `<PRODUCT>` / `<product>` filled in:
 
 ```
-✅ Workspace skeleton → ai-platform/ · <PRODUCT>-Repos/ · config/ · README.md  (<all present | created: <list>>)
+✅ Workspace skeleton → config/ · README.md  (<all present | created: <list>>)
 ✅ Generated your guide → ./getting-started.md  (open it any time; re-run /start to refresh)
 ✅ Branch config → ./config/git-branch.json  (<created | already present> — edit it to pin a repo's base branch)
 
@@ -93,10 +97,10 @@ The flow
                                                           →  you stage, commit, push, raise the MR
 
 Before your first run (one-time)
-  [ ] Clone the two brains into <PRODUCT>-Repos/:
+  [ ] Clone the two brains HERE at the workspace root:
         git clone https://gitlab.freightify.in/ff-ai/<product>-ai-brain.git
         git clone https://gitlab.freightify.in/ff-ai/shared-ai-brain.git
-  [ ] Clone the <PRODUCT> service repos you work on, alongside them
+  [ ] Clone the <PRODUCT> service repos you work on, alongside them (also at the root)
   [ ] Atlassian MCP connected in your IDE  (then there's no JIRA token to set)
   [ ] Product auto-detected from this folder — nothing to configure
 
@@ -107,10 +111,9 @@ More
 
 ## Constraints
 - **Product-scoped:** mention only the product(s) actually present; never name another product's brain or repos.
-- **Write surface:** creates the missing skeleton folders (`ai-platform/`, `<PRODUCT>-Repos/`, `config/`), seeds
-  `./README.md` (only if absent) and `./config/git-branch.json` (only if absent), and writes `./getting-started.md`
-  (always overwritten). Nothing else. **No git operations** — never clones, pulls, or checks out — and **never
-  calls JIRA**.
+- **Write surface:** creates the missing `config/` folder, seeds `./README.md` (only if absent) and
+  `./config/git-branch.json` (only if absent), and writes `./getting-started.md` (always overwritten). Nothing
+  else. **No git operations** — never clones, pulls, or checks out — and **never calls JIRA**.
 - **Idempotent + always-replace:** re-running fully overwrites `getting-started.md` with a fresh render — safe to run
   any time; never merges or appends. Any manual edits to the generated file are discarded on the next `/start`.
 - **`getting-started.md` is a generated artifact** — never hand-edited, never distributed. To change it for everyone,

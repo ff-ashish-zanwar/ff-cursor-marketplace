@@ -75,7 +75,7 @@ No paraphrasing, no "but I can do X instead" that achieves the same loss.
   delete data and hand it over as a fait accompli.
 - **This rule governs AI behavior; it does not by itself stop a human.** Hard prevention of human deletion requires
   platform controls (least-privilege DB grants, a JIRA permission scheme without Delete, GitLab protected branches/tags +
-  restricted roles). Those are documented in [`SAFEGUARDS.md`](../SAFEGUARDS.md) and are the authoritative enforcement layer.
+  restricted roles). Those are documented in [`SAFEGUARDS.md`](../docs/SAFEGUARDS.md) and are the authoritative enforcement layer.
 
 ## Examples
 
@@ -95,6 +95,6 @@ No paraphrasing, no "but I can do X instead" that achieves the same loss.
 ## Related
 - Rules: `jira-write-permissions` (JIRA specifics), `migration-safety` (the only sanctioned, human-applied path for a
   data-losing schema change), `base-branch-selection` (git branch/push discipline), `secrets-management`.
-- Doc: [`SAFEGUARDS.md`](../SAFEGUARDS.md) — the platform-level hard controls that enforce this for humans, not just AI.
+- Doc: [`SAFEGUARDS.md`](../docs/SAFEGUARDS.md) — the platform-level hard controls that enforce this for humans, not just AI.
 - Agents: every agent; specifically gating `coder-agent`, `migration-agent`, `jira-agent`, `jira-writer-agent`,
   `base-branch-picker-agent`, `knowledge-base-updater-agent`, and all 14 review agents.
