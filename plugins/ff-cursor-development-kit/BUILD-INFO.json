@@ -1,7 +1,7 @@
 {
-  "plugin_version": "0.2.10",
-  "engine_commit": "d80bcff",
-  "engine_commit_date": "2026-07-20T07:23:07+05:30",
-  "built_at": "2026-07-20T01:53:15Z",
+  "plugin_version": "0.2.11",
+  "engine_commit": "457383a",
+  "engine_commit_date": "2026-07-20T07:57:29+05:30",
+  "built_at": "2026-07-20T02:27:35Z",
   "engine_repo": "gitlab.freightify.in/ff-ai/freightify-ai-workflow"
 }
