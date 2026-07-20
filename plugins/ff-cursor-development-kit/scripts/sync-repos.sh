@@ -101,21 +101,31 @@ CONFIG="$WS/config/git-branch.json"
 DEFAULT_FALLBACK=(development dev IMD-Development imd-dev)
 
 # Look up the mapped branch for a repo. Echoes the branch, or nothing if unmapped.
+# Supports BOTH schemas: legacy flat {"repositories": {...}} and v2 product-wise
+# groups ({"shared": {...}, "EFP": {...}, "RMS": {...}, "ATLAS": {...}, "unassigned": {...}}).
+# Lookup order: repositories (legacy) → shared → EFP → RMS → ATLAS → unassigned; first match wins.
+# If a repo appears in multiple groups with DIFFERENT branches, a warning is printed once.
 # Prefers jq, then python3, then a grep fallback — so no hard dependency on jq.
+CONFIG_GROUPS=(repositories shared EFP RMS ATLAS unassigned)
 lookup_branch() {
   local repo="$1"
   [ -f "$CONFIG" ] || return 0
-  if command -v jq >/dev/null 2>&1; then
-    jq -r --arg r "$repo" '.repositories[$r] // empty' "$CONFIG" 2>/dev/null
-  elif command -v python3 >/dev/null 2>&1; then
+  if command -v python3 >/dev/null 2>&1; then
     python3 -c 'import json,sys
 try:
-    d=json.load(open(sys.argv[1]))
-    print(d.get("repositories",{}).get(sys.argv[2],""))
+    d=json.load(open(sys.argv[1])); r=sys.argv[2]
+    groups=["repositories","shared","EFP","RMS","ATLAS","unassigned"]
+    hits=[(g,d[g][r]) for g in groups if isinstance(d.get(g),dict) and r in d[g]]
+    if hits:
+        if len({b for _,b in hits})>1:
+            print(f"WARN: {r} mapped in {[g for g,_ in hits]} with different branches; using {hits[0][1]} ({hits[0][0]})", file=sys.stderr)
+        print(hits[0][1])
 except Exception:
-    pass' "$CONFIG" "$repo" 2>/dev/null
+    pass' "$CONFIG" "$repo" 2> >(grep WARN >&2 || true)
+  elif command -v jq >/dev/null 2>&1; then
+    jq -r --arg r "$repo" '(.repositories[$r] // .shared[$r] // .EFP[$r] // .RMS[$r] // .ATLAS[$r] // .unassigned[$r]) // empty' "$CONFIG" 2>/dev/null
   else
-    # grep fallback: match  "repo": "branch"
+    # grep fallback: match  "repo": "branch"  anywhere in the file (works for both schemas)
     grep -Eo "\"$repo\"[[:space:]]*:[[:space:]]*\"[^\"]+\"" "$CONFIG" 2>/dev/null \
       | head -1 | sed -E 's/.*:[[:space:]]*"([^"]+)"/\1/'
   fi

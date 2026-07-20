@@ -1,129 +1,97 @@
 ---
 name: start
-description: The first command a new user runs
+description: The kick-start command a developer runs **once, in their pool** — the `Freightify-AI-Workspace/` folder that
 command: /start
 arguments: (none)
 category: onboarding
 on-demand: true
-side-effects: (1) scaffolds the workspace skeleton — creates ./config/ and the static ./README.md where missing (create-if-missing only; NO git operations; never touches existing content); (2) writes ./getting-started.md at the workspace root (product-detected; FULLY REPLACED every run); (3) seeds ./config/git-branch.json from the engine default ONLY if it does not already exist (never overwrites — it is user-maintained config). No JIRA calls.
+side-effects: POOL MODE (primary) — (1) seeds ./config/git-branch.json from the engine default ONLY if absent; (2) generates Freightify-AI-<PRODUCT>-Workspace.code-workspace at the pool root for each product whose brain is present — CREATE-IF-MISSING ONLY, existing files are never touched. LEGACY workspace-folder mode — scaffolds config/ + README.md and writes ./getting-started.md (fully replaced). NO git operations in any mode. No JIRA calls.
 ---
 # /start
 
 ## Purpose
-The first command a new user runs. It **generates the onboarding guide for whichever workspace it's run from**:
-1. detects the product from the current workspace,
-2. writes a product-specific **`getting-started.md`** at the workspace root, and
-3. prints a short orientation and points the user to that file.
+The kick-start command a developer runs **once, in their pool** — the `Freightify-AI-Workspace/` folder that
+holds every repo cloned ONCE, flat at its root. `/start` turns that pool into ready-to-open product workspaces:
 
-The static **`README.md`** at the workspace root exists precisely to send the user here — `/start` is what turns
-that one-line pointer into a full, product-correct guide **on the user's own machine**. No `getting-started.md` is
-ever hand-distributed; each developer generates their own by running `/start`, so it always matches their product
-and the current command set.
+1. detects which products are present (their brains are cloned),
+2. **generates one Cursor workspace file per product** at the pool root
+   (`Freightify-AI-<PRODUCT>-Workspace.code-workspace`), and
+3. seeds `./config/git-branch.json` if missing.
 
-## Product detection
-Resolve the current product from the workspace, in order:
-1. **The workspace folder name** — `Freightify-AI-<PRODUCT>-Workspace` → **<PRODUCT>** (e.g.
-   `Freightify-AI-ATLAS-Workspace` → ATLAS). This is the primary rule: it works even in a **brand-new, empty
-   workspace**, before anything has been cloned. (The admin mono-workspace `Freightify-AI-Workspace` carries no
-   product in its name and falls through to the rules below.)
-2. The product brain cloned at the workspace **root** (`<product>-ai-brain/` → that product) — layout V2, the
-   canonical flat layout: every repo sits directly at the workspace root.
-3. Legacy (layout V1) fallback: a single `<product>-Repos/` folder present (e.g. `RMS-Repos/` → **RMS**), or the
-   brain inside it.
-4. If more than one product is detected (e.g. several brains or product folders) → list them and ask which to generate for.
+The developer then opens the workspace file in Cursor (File → Open Workspace from File) — the window shows only
+that product's repos. A multi-product developer opens up to 3 windows over the same pool. `/start` is a
+**one-time kick-start**: afterwards developers maintain the workspace files by hand (new repo → clone into the
+pool → add one `{ "path": "<repo>" }` line → add its branch to `config/git-branch.json`).
 
-**Never reference a product whose folder isn't present** — a team only ever sees its own product.
+## Mode detection
+1. **POOL MODE (primary):** the current folder contains one or more `*-ai-brain/` clones directly at its root
+   and is NOT named `Freightify-AI-<PRODUCT>-Workspace`. (The developer pool and the admin root both qualify.)
+2. **Legacy workspace-folder mode:** the folder is named `Freightify-AI-<PRODUCT>-Workspace` (or contains a
+   legacy `<PRODUCT>-Repos/`) — the pre-pool flat/V1 layouts. Kept for backward compatibility only.
 
-## What it does
-1. **Detect** `<PRODUCT>` (and `<product>` lower-case) from the workspace per the rules above.
-2. **Scaffold the skeleton (create-if-missing).** Ensure the flat V2 layout exists — create what's missing,
-   never touch what's present:
-   ```
-   mkdir -p ./config
-   [ -f ./README.md ] || <render scripts/team-readme.template.md → ./README.md>
-   ```
-   Target shape (layout V2 — everything flat at the workspace root):
-   ```
-   Freightify-AI-<PRODUCT>-Workspace/
-   ├── <product service repos…>   ← developer clones them directly here
-   ├── <product>-ai-brain/        ← cloned here
-   ├── shared-ai-brain/           ← cloned here
-   ├── config/                    ← git-branch.json (seeded in the next step)
-   ├── README.md                  ← static pointer ("run /start") — seeded only if absent
-   └── getting-started.md         ← generated in the next step
-   ```
-   No engine folder — the engine reaches developers exclusively through the plugin.
-   **No git operations** — `/start` never clones, pulls, fetches, or checks anything out. The generated guide gives
-   the developer the exact `git clone` commands for the two brains and their service repos.
-3. **Generate the guide.** Render the getting-started template (`scripts/getting-started.template.md`), substituting
-   `{{PRODUCT}}` / `{{product}}`, and write it to **`./getting-started.md`** at the workspace root. The file is
-   **always fully replaced** — if one already exists it is overwritten wholesale (no merge, no append), so the guide
-   always reflects the current product + command set and any hand-edits are discarded. Prefer the deterministic generator:
-   ```
-   bash ai-platform/freightify-ai-workflow/scripts/gen-getting-started.sh <PRODUCT> ./getting-started.md
-   ```
-   If that script isn't reachable (e.g. plugin-only install), render the template directly and write the same file.
-4. **Seed the branch config (only if missing).** Ensure `./config/git-branch.json` exists at the workspace root:
+## Pool mode — what it does
+1. **Seed the branch config (only if missing):**
    ```
    mkdir -p ./config
    [ -f ./config/git-branch.json ] || cp <engine>/scripts/git-branch.default.json ./config/git-branch.json
    ```
-   This is the repo→base-branch map that `/sync-repos` pulls and `/implement` derives feature branches from. Unlike
-   `getting-started.md`, it is **user-maintained config** — if it already exists, **leave it untouched** (never
-   overwrite; the developer edits it to add repos or change branches). Mention in the panel whether it was created
-   or already present.
-5. **Orient.** Print the one-screen panel below, and tell the user their full guide is now at `./getting-started.md`.
+   Schema v2 (product-wise): `fallback_branches` + groups `shared` / `EFP` / `RMS` / `ATLAS`. User-maintained;
+   NEVER overwritten. One clone per repo in the pool ⇒ one branch per repo — a repo belongs to exactly one group.
+2. **Generate the workspace files** — prefer the deterministic generator:
+   ```
+   bash freightify-ai-workflow/scripts/gen-workspace-files.sh .
+   ```
+   (Plugin-only install: apply the same rules by hand.) For each product whose `<product>-ai-brain/` is present:
+   - Derive the repo list from the brains: exclusives from `<product>-ai-brain/manifest.json` + shared services
+     from `shared-ai-brain/consumer-registry.json` where the product is a consumer.
+   - Include **only repos that exist on disk** — no dangling entries.
+   - Every file starts with: `freightify-ai-workflow` (reference-only engine clone, if present),
+     `<product>-ai-brain`, `shared-ai-brain`, `config` — then the product's service repos.
+   - Paths are **bare names** (`"skipperroutes"`) — the file lives inside the pool.
+   - **CREATE-IF-MISSING ONLY.** An existing workspace file is never regenerated or modified — it belongs to the
+     developer after first creation.
+3. **Report** — per product: `created (N folders)` / `already present — left untouched` / `skipped (brain not
+   cloned)`; plus repos the brains list that aren't cloned yet, and **unmapped repos** (git folders no brain
+   knows: *"unmapped: <names> — add manually to a workspace file if needed"*).
+4. **No `getting-started.md` in pool mode** — the workspace files are the product. Deep-dive docs live in the
+   engine clone every workspace includes (`freightify-ai-workflow/getting-started.md` + `docs/`).
 
-## Output (the orientation panel)
-Print this, with the resolved `<PRODUCT>` / `<product>` filled in:
-
+## Pool-mode output (panel)
 ```
-✅ Workspace skeleton → config/ · README.md  (<all present | created: <list>>)
-✅ Generated your guide → ./getting-started.md  (open it any time; re-run /start to refresh)
-✅ Branch config → ./config/git-branch.json  (<created | already present> — edit it to pin a repo's base branch)
+✅ Branch config → ./config/git-branch.json  (<created | already present>)
+✅ Workspace files:
+     Freightify-AI-EFP-Workspace.code-workspace    <created (26 folders) | already present>
+     Freightify-AI-RMS-Workspace.code-workspace    <created | already present | skipped — rms-ai-brain not cloned>
+     Freightify-AI-ATLAS-Workspace.code-workspace  <…>
+   not cloned yet (add later): <repo names, per product>
+   ⚠ unmapped repos: <names> — add manually to a workspace file if needed
 
-You're in the <PRODUCT> workspace. The AI already knows <PRODUCT>'s services and how they
-connect (its brain), so it can route work to the right code and help you ship it.
-
-Two front doors
-  • Author a ticket:    /author-ticket "<your idea>"
-        Turns a plain-English idea (and any sub-tasks you list) into complete JIRA ticket(s) —
-        right project + component + acceptance criteria — ready for a developer to pick up.
-  • Build a ticket:     /implement <JIRA-KEY>
-        Plan → you approve → code → 14 reviews → you approve. Three gates; you stay in control.
-
-The flow
-  /author-ticket  →  JIRA ticket  →  /implement <KEY>  →  reviewed, UNCOMMITTED code
-                                                          →  you stage, commit, push, raise the MR
-
-Before your first run (one-time)
-  [ ] Clone the two brains HERE at the workspace root:
-        git clone https://gitlab.freightify.in/ff-ai/<product>-ai-brain.git
-        git clone https://gitlab.freightify.in/ff-ai/shared-ai-brain.git
-  [ ] Clone the <PRODUCT> service repos you work on, alongside them (also at the root)
-  [ ] Atlassian MCP connected in your IDE  (then there's no JIRA token to set)
-  [ ] Product auto-detected from this folder — nothing to configure
-
-More
-  • Your full guide:  ./getting-started.md   • Other commands:  /plan /triage /route /bugfix /db-impact /review-ui /sync-repos
-  • Full flags + gate replies:  command-flags        • Not sure where a change belongs?  /route "<your question>"
+Next: open a workspace file in Cursor (File → Open Workspace from File) and run /version, then /triage <KEY>.
 ```
+
+## Product detection inside an opened workspace
+When commands run inside a Cursor multi-root workspace (opened from a `.code-workspace`), the product is the
+**single `<product>-ai-brain` among the workspace roots**. Every generated file contains exactly one product
+brain, so detection is unambiguous. (Folder-name detection applies only to legacy workspace folders.)
+
+## Legacy workspace-folder mode (backward compatibility)
+In a folder named `Freightify-AI-<PRODUCT>-Workspace` (flat layout) or holding `<PRODUCT>-Repos/` (V1):
+scaffold `config/` + `README.md` (from `scripts/team-readme.template.md`, only if absent) and render
+`scripts/getting-started.template.md` → `./getting-started.md` (always fully replaced). Same rules as before.
 
 ## Constraints
-- **Product-scoped:** mention only the product(s) actually present; never name another product's brain or repos.
-- **Write surface:** creates the missing `config/` folder, seeds `./README.md` (only if absent) and
-  `./config/git-branch.json` (only if absent), and writes `./getting-started.md` (always overwritten). Nothing
-  else. **No git operations** — never clones, pulls, or checks out — and **never calls JIRA**.
-- **Idempotent + always-replace:** re-running fully overwrites `getting-started.md` with a fresh render — safe to run
-  any time; never merges or appends. Any manual edits to the generated file are discarded on the next `/start`.
-- **`getting-started.md` is a generated artifact** — never hand-edited, never distributed. To change it for everyone,
-  edit `scripts/getting-started.template.md` in the engine; users pick it up next time they run `/start`.
-- Keep the printed panel to one screen — the depth lives in the generated `getting-started.md`, `command-flags`, and `product-flow.md`.
+- **No git operations in any mode** — never clones, pulls, fetches, or checks anything out. The pool is built
+  by the developer with plain `git clone`; missing repos are *reported*, never fetched.
+- **Write surface (pool mode):** `./config/git-branch.json` (create-only) + the `.code-workspace` files
+  (create-only). Nothing else. Existing files of either kind are never modified.
+- **Never calls JIRA.**
+- The engine clone in each workspace is **reference-only** (docs + scripts); pushing to it is blocked by GitLab
+  protection, and commands always execute via the plugin.
 
 ## Related
-- Commands: `/author-ticket`, `/implement`, `/plan`, `/triage`, `/route`, `/sync-repos`. Reference: `command-flags`.
-- Generates: root `getting-started.md` (from `scripts/getting-started.template.md` via `scripts/gen-getting-started.sh`); seeds `config/git-branch.json` (from `scripts/git-branch.default.json`) if absent.
-- Entry point that sends users here: the static workspace-root `README.md` (`scripts/team-readme.template.md`) —
-  seeded by `/start` itself when absent, so a brand-new empty workspace bootstraps with nothing pre-placed.
-- Config consumed by `/sync-repos` (pulls each repo's base branch) and `/implement` (`base-branch-selection`).
-- Docs: `jira-integration/product-flow.md`.
+- Generator: `scripts/gen-workspace-files.sh` (reads `<product>-ai-brain/manifest.json` +
+  `shared-ai-brain/consumer-registry.json`).
+- Config: `scripts/git-branch.default.json` (v2 schema) — consumed by `/sync-repos` and `base-branch-selection`.
+- Onboarding doc: `team-session/Developer-Onboarding.md` (admin workspace) — the end-to-end developer guide.
+- Legacy templates: `scripts/team-readme.template.md`, `scripts/getting-started.template.md`,
+  `scripts/gen-getting-started.sh`.

@@ -1,51 +1,62 @@
 {
   "_comment": [
-    "git-branch.json — the base/integration branch each repo derives feature branches from.",
-    "One consolidated file, identical in every workspace (lives at <workspace-root>/config/git-branch.json).",
-    "Keyed by repo FOLDER name; the same name uses the same branch across all products, so list it once.",
-    "USED BY: (1) /sync-repos — checks out the mapped branch and `git pull`s it on every repo;",
-    "         (2) /implement — pulls this base branch before deriving `ai/<KEY>-<slug>` from it.",
-    "LOOKUP: if a repo is listed under `repositories`, that branch wins. If it is NOT listed, fall back to",
-    "        `fallback_branches` in order and use the FIRST that exists on origin. If none exist, the repo is skipped.",
-    "AI-brains (*ai-brain*, *ai-knowledge-base*) are never synced and are intentionally omitted.",
-    "Edit this file to add a repo or change a branch — it is user-maintained. /start seeds it only if missing (never overwrites)."
+    "git-branch.json (schema v2, product-wise) \u2014 the base/integration branch each repo derives feature branches from.",
+    "Lives at <pool-root>/config/git-branch.json. NOT a git repo \u2014 each developer's local copy; user-maintained.",
+    "GROUPS: `shared` = repos used by >1 product (per shared-ai-brain consumer-registry); `EFP`/`RMS`/`ATLAS` = product-exclusive repos.",
+    "One clone per repo in the pool => one branch per repo. A repo must appear in exactly ONE group;",
+    "if it appears in several with different branches, tooling warns and the first match wins (order: shared, EFP, RMS, ATLAS).",
+    "USED BY: (1) /sync-repos \u2014 checks out the mapped branch and `git pull`s it; (2) /implement \u2014 derives ai/<KEY>-<slug> from it.",
+    "LOOKUP: mapped branch wins; unmapped repos fall back to `fallback_branches` in order (first that exists on origin).",
+    "AI-brains + tooling repos (freightify-ai-workflow, ff-cursor-marketplace) are never synced and intentionally omitted.",
+    "Legacy flat schema ({\"repositories\": {...}}) is still accepted by all tooling."
   ],
-  "fallback_branches": ["development", "dev", "IMD-Development", "imd-dev"],
-  "repositories": {
+  "fallback_branches": [
+    "development",
+    "dev",
+    "IMD-Development",
+    "imd-dev"
+  ],
+  "shared": {
     "admin-backend": "development",
     "admin-frontend": "development",
-    "api-service": "development",
-    "extraction-frontend": "development",
-    "extraction-service": "development",
     "fb-api-integration": "development",
     "fb-companyhierarchy": "development",
-    "fb-documents": "development",
     "fb-grouppolicy": "development",
     "fb-iqs": "development",
-    "fb-notifications-ts": "development",
     "fb-proc": "IMD-Development",
     "fb-quotes": "development",
-    "fb-rates": "development",
     "fb-rates-go": "development",
-    "fb-shipments": "development",
-    "fb-shipper-frontend": "development",
-    "fb-shipper-latest": "development",
-    "fb-track": "dev",
-    "freightify-web": "development",
     "fy-iam-go": "development",
-    "fy-tms-bulk-sync": "dev",
-    "master-api-service": "dev",
-    "qa-agent": "development",
     "qbt-service": "development",
-    "quote-ai-backend": "development",
-    "quote-ai-frontend": "development",
-    "rate-agent": "development",
-    "rate-cqrs": "development",
-    "rate-extraction-service": "development",
     "remote-browser": "IMD-Development",
     "rpav2-setup": "IMD-Development",
     "schedules": "dev",
-    "skipper": "development",
+    "skipper": "development"
+  },
+  "EFP": {
+    "extraction-frontend": "development",
+    "extraction-service": "development",
+    "fb-documents": "development",
+    "fb-shipper-frontend": "development",
+    "freightify-web": "development",
+    "qa-agent": "development",
+    "rate-agent": "development",
+    "rate-extraction-service": "development",
     "skipperroutes": "development"
+  },
+  "RMS": {
+    "api-service": "development",
+    "fb-notifications-ts": "development",
+    "fb-rates": "development",
+    "fb-shipments": "development",
+    "fb-shipper-latest": "development",
+    "fb-track": "dev",
+    "fy-tms-bulk-sync": "dev",
+    "master-api-service": "dev",
+    "rate-cqrs": "development"
+  },
+  "ATLAS": {
+    "quote-ai-backend": "development",
+    "quote-ai-frontend": "development"
   }
 }
